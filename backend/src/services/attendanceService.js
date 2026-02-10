@@ -121,21 +121,8 @@ const uploadPhotos = async (lectureId, facultyId, storageUrls) => {
         throw err;
     }
 
-    // Upload window check (2 hours from slot start time)
-    const slot = await Timetable.findById(lecture.timetableSlotId);
-    if (slot) {
-        const [h, m] = slot.startTime.split(':').map(Number);
-        const slotStart = new Date(lecture.date + 'T00:00:00');
-        slotStart.setHours(h, m, 0, 0);
-        const windowEnd = new Date(slotStart.getTime() + 2 * 60 * 60 * 1000);
-        const now = new Date();
-
-        if (now > windowEnd) {
-            const err = new Error('Photo upload window has expired (2 hours after slot start)');
-            err.statusCode = 400;
-            throw err;
-        }
-    }
+    // Time window check: Removed per user request. 
+    // Faculty can upload photos anytime for a valid lecture.
 
     // Save photos (append-only)
     const photoDocuments = storageUrls.map((url) => ({
