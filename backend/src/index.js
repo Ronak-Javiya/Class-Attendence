@@ -11,6 +11,7 @@ const classRoutes = require('./routes/classRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const disputeRoutes = require('./routes/disputeRoutes');
+const faceRoutes = require('./routes/faceRoutes');
 const logger = require('./utils/logger');
 
 const app = express();
@@ -43,6 +44,7 @@ app.use('/api/classes', classRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api', attendanceRoutes);
 app.use('/api/disputes', disputeRoutes);
+app.use('/api/face', faceRoutes);
 
 // -------------------------------------------------------
 // 404 Handler

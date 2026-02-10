@@ -1,16 +1,16 @@
 /**
- * Attendance Worker — Async stub for AI photo processing.
+ * Attendance Worker — AI-powered photo processing.
  *
- * MVP Philosophy:
- *   - This stub simulates an AI pipeline.
- *   - It receives a lectureId and processes photos.
- *   - For MVP: marks all enrolled students as PRESENT with 0.85 confidence.
- *   - Architecture allows drop-in replacement with real face recognition later.
+ * Architecture:
+ *   - Sends classroom photos to Python AI service for face detection.
+ *   - Receives face embeddings bac k.
+ *   - Matches against enrolled student embeddings in MongoDB (cosine similarity).
+ *   - Creates AttendanceRecord + AttendanceEntry documents.
+ *   - Transitions lecture to LOCKED.
  *
- * In production, this would be:
- *   - A separate microservice or serverless function.
- *   - Triggered via message queue (Redis, SQS, RabbitMQ).
- *   - Running GPU-accelerated face detection/recognition.
+ * Fallback:
+ *   - If AI service is unavailable, marks all students ABSENT with 0 confidence.
+ *   - This ensures the system doesn't silently mark students present.
  */
 
 const Lecture = require('../models/Lecture');
@@ -18,6 +18,7 @@ const AttendanceRecord = require('../models/AttendanceRecord');
 const AttendanceEntry = require('../models/AttendanceEntry');
 const AttendancePhoto = require('../models/AttendancePhoto');
 const Enrollment = require('../models/Enrollment');
+const { matchClassroomFaces } = require('../services/faceService');
 const logger = require('../utils/logger');
 
 /**
@@ -26,10 +27,9 @@ const logger = require('../utils/logger');
  * Steps:
  *   1. Validate lecture is in PHOTO_UPLOADED state.
  *   2. Fetch uploaded photos (evidence).
- *   3. Fetch approved students from Enrollment (Module 3).
- *   4. Stub AI: mark all students PRESENT.
- *   5. Create AttendanceRecord + AttendanceEntry documents.
- *   6. Transition lecture to ATTENDANCE_GENERATED, then LOCKED.
+ *   3. Call faceService.matchClassroomFaces() for AI-powered matching.
+ *   4. Create AttendanceRecord + AttendanceEntry documents.
+ *   5. Transition lecture to ATTENDANCE_GENERATED, then LOCKED.
  *
  * Idempotent: if attendance already exists for this lecture, skip.
  */
@@ -61,25 +61,35 @@ const processLectureAttendance = async (lectureId) => {
         return;
     }
 
-    // 2. Fetch approved students for this class (from Module 3)
-    const enrollments = await Enrollment.find({
-        classId: lecture.classId,
-        status: 'APPROVED',
-    });
-
-    if (enrollments.length === 0) {
-        logger.warn('Worker: No approved students for class', {
-            classId: lecture.classId,
+    // 2. Call AI service for face matching
+    let matchResults;
+    try {
+        // Photo storageUrls are mock paths for now.
+        // In production, these would be real file paths or S3 URLs downloaded to temp.
+        const photoPaths = photos.map(p => p.storageUrl);
+        matchResults = await matchClassroomFaces(lecture.classId, photoPaths);
+    } catch (err) {
+        logger.warn('Worker: AI service unavailable, falling back to all-ABSENT', {
+            lectureId,
+            error: err.message,
         });
+
+        // Fallback: Mark all enrolled students ABSENT with 0 confidence
+        const enrollments = await Enrollment.find({
+            classId: lecture.classId,
+            status: 'APPROVED',
+        });
+        matchResults = enrollments.map(e => ({
+            studentId: e.studentId.toString(),
+            status: 'ABSENT',
+            confidence: 0,
+        }));
     }
 
-    // 3. Stub AI pipeline — mark all students PRESENT with mock confidence
-    //    In production, this would analyze photos and match faces.
-    const stubResults = enrollments.map((enrollment) => ({
-        studentId: enrollment.studentId,
-        status: 'PRESENT',
-        confidenceScore: 0.85, // Mock confidence
-    }));
+    // 3. Compute aggregate confidence
+    const avgConfidence = matchResults.length > 0
+        ? matchResults.reduce((sum, r) => sum + r.confidence, 0) / matchResults.length
+        : 0;
 
     // 4. Create AttendanceRecord
     const record = await AttendanceRecord.create({
@@ -87,16 +97,16 @@ const processLectureAttendance = async (lectureId) => {
         classId: lecture.classId,
         generatedAt: new Date(),
         generationMethod: 'PHOTO_CLUSTER_V1',
-        confidenceScore: 0.85,
+        confidenceScore: Math.round(avgConfidence * 100) / 100,
         status: 'AUTO_LOCKED',
     });
 
     // 5. Create AttendanceEntry for each student
-    const entries = stubResults.map((result) => ({
+    const entries = matchResults.map((result) => ({
         attendanceRecordId: record._id,
         studentId: result.studentId,
         status: result.status,
-        confidenceScore: result.confidenceScore,
+        confidenceScore: result.confidence,
     }));
 
     if (entries.length > 0) {
@@ -113,6 +123,7 @@ const processLectureAttendance = async (lectureId) => {
         lectureId,
         recordId: record._id,
         studentsProcessed: entries.length,
+        presentCount: matchResults.filter(r => r.status === 'PRESENT').length,
     });
 
     return record;
