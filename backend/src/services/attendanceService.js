@@ -1,0 +1,259 @@
+const Lecture = require('../models/Lecture');
+const AttendanceRecord = require('../models/AttendanceRecord');
+const AttendanceEntry = require('../models/AttendanceEntry');
+const AttendancePhoto = require('../models/AttendancePhoto');
+const Class = require('../models/Class');
+const Timetable = require('../models/Timetable');
+const { processLectureAttendance } = require('../workers/attendanceWorker');
+const logger = require('../utils/logger');
+
+// -------------------------------------------------------
+// Faculty: Create Lecture
+// -------------------------------------------------------
+
+/**
+ * Creates a new lecture session.
+ *
+ * Validations:
+ *   - Faculty must own the class.
+ *   - Class must be ACTIVE.
+ *   - Timetable slot must belong to the class.
+ *   - Slot's dayOfWeek must match the current date's day.
+ *   - No duplicate lecture for same class/slot/day.
+ */
+const createLecture = async (facultyId, { classId, timetableSlotId }) => {
+    // Verify class
+    const cls = await Class.findById(classId);
+    if (!cls) {
+        const err = new Error('Class not found');
+        err.statusCode = 404;
+        throw err;
+    }
+    if (cls.status !== 'ACTIVE') {
+        const err = new Error('Only ACTIVE classes can have lectures');
+        err.statusCode = 400;
+        throw err;
+    }
+    if (cls.facultyId.toString() !== facultyId.toString()) {
+        const err = new Error('Only the class owner can create lectures');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    // Verify timetable slot
+    const slot = await Timetable.findById(timetableSlotId);
+    if (!slot || slot.classId.toString() !== classId) {
+        const err = new Error('Timetable slot not found or does not belong to this class');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Validate day matches
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayDay = today.getDay(); // 0=Sunday, 6=Saturday
+
+    if (slot.dayOfWeek !== todayDay) {
+        const err = new Error(
+            `Timetable slot is for day ${slot.dayOfWeek} but today is day ${todayDay}`
+        );
+        err.statusCode = 400;
+        throw err;
+    }
+
+    // Check for duplicate lecture
+    const existing = await Lecture.findOne({
+        classId,
+        timetableSlotId,
+        date: todayStr,
+    });
+    if (existing) {
+        const err = new Error('Lecture already exists for this class, slot, and date');
+        err.statusCode = 409;
+        throw err;
+    }
+
+    const lecture = await Lecture.create({
+        classId,
+        timetableSlotId,
+        date: todayStr,
+        createdBy: facultyId,
+        status: 'CREATED',
+    });
+
+    logger.info('Lecture created', { lectureId: lecture._id, classId, date: todayStr });
+    return lecture;
+};
+
+// -------------------------------------------------------
+// Faculty: Upload Photos
+// -------------------------------------------------------
+
+/**
+ * Records photo uploads for a lecture and triggers async attendance generation.
+ *
+ * Validations:
+ *   - Only the lecture creator can upload.
+ *   - Lecture must be in CREATED or PHOTO_UPLOADED state.
+ *   - Upload window: within 2 hours of slot start time.
+ *
+ * For MVP: storageUrls are mock paths (no actual file storage).
+ */
+const uploadPhotos = async (lectureId, facultyId, storageUrls) => {
+    const lecture = await Lecture.findById(lectureId);
+    if (!lecture) {
+        const err = new Error('Lecture not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Only creator can upload
+    if (lecture.createdBy.toString() !== facultyId.toString()) {
+        const err = new Error('Only the lecture creator can upload photos');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    // State check: only CREATED or PHOTO_UPLOADED allows photo uploads
+    if (!['CREATED', 'PHOTO_UPLOADED'].includes(lecture.status)) {
+        const err = new Error(`Cannot upload photos when lecture status is: ${lecture.status}`);
+        err.statusCode = 400;
+        throw err;
+    }
+
+    // Upload window check (2 hours from slot start time)
+    const slot = await Timetable.findById(lecture.timetableSlotId);
+    if (slot) {
+        const [h, m] = slot.startTime.split(':').map(Number);
+        const slotStart = new Date(lecture.date + 'T00:00:00');
+        slotStart.setHours(h, m, 0, 0);
+        const windowEnd = new Date(slotStart.getTime() + 2 * 60 * 60 * 1000);
+        const now = new Date();
+
+        if (now > windowEnd) {
+            const err = new Error('Photo upload window has expired (2 hours after slot start)');
+            err.statusCode = 400;
+            throw err;
+        }
+    }
+
+    // Save photos (append-only)
+    const photoDocuments = storageUrls.map((url) => ({
+        lectureId,
+        storageUrl: url,
+        uploadedBy: facultyId,
+    }));
+    await AttendancePhoto.insertMany(photoDocuments);
+
+    // Transition to PHOTO_UPLOADED if currently CREATED
+    if (lecture.status === 'CREATED') {
+        lecture.status = 'PHOTO_UPLOADED';
+        await lecture.save();
+    }
+
+    logger.info('Photos uploaded', { lectureId, count: storageUrls.length });
+
+    // Trigger async attendance generation
+    // In production: dispatch to message queue. For MVP: call directly (non-blocking).
+    setImmediate(() => {
+        processLectureAttendance(lectureId).catch((err) => {
+            logger.error('Async attendance generation failed', { lectureId, error: err.message });
+        });
+    });
+
+    return { photosUploaded: storageUrls.length, lectureStatus: lecture.status };
+};
+
+// -------------------------------------------------------
+// Student: View My Attendance
+// -------------------------------------------------------
+
+/**
+ * Returns attendance entries for the requesting student, grouped by lecture.
+ */
+const getMyAttendance = async (studentId) => {
+    const entries = await AttendanceEntry.find({ studentId })
+        .populate({
+            path: 'attendanceRecordId',
+            select: 'lectureId classId generatedAt confidenceScore',
+            populate: [
+                {
+                    path: 'lectureId',
+                    select: 'date timetableSlotId classId',
+                    populate: { path: 'timetableSlotId', select: 'dayOfWeek startTime endTime' },
+                },
+                {
+                    path: 'classId',
+                    select: 'title classCode',
+                },
+            ],
+        })
+        .sort({ createdAt: -1 });
+
+    return entries;
+};
+
+// -------------------------------------------------------
+// Faculty/Admin/HOD: View Class Attendance
+// -------------------------------------------------------
+
+/**
+ * Returns lecture-wise attendance summary for a class.
+ * Faculty must own the class. Admin/HOD can view any.
+ */
+const getClassAttendance = async (classId, user) => {
+    const cls = await Class.findById(classId);
+    if (!cls) {
+        const err = new Error('Class not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Faculty can only view their own class
+    if (user.role === 'FACULTY' && cls.facultyId.toString() !== user.userId.toString()) {
+        const err = new Error('You can only view attendance for your own class');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    // Get all locked lectures for this class
+    const lectures = await Lecture.find({ classId, status: 'LOCKED' })
+        .populate('timetableSlotId', 'dayOfWeek startTime endTime')
+        .sort({ date: -1 });
+
+    // For each lecture, get the attendance summary
+    const result = [];
+    for (const lecture of lectures) {
+        const record = await AttendanceRecord.findOne({ lectureId: lecture._id });
+        if (!record) continue;
+
+        const entries = await AttendanceEntry.find({ attendanceRecordId: record._id })
+            .populate('studentId', 'fullName email');
+
+        const presentCount = entries.filter((e) => e.status === 'PRESENT').length;
+        const absentCount = entries.filter((e) => e.status === 'ABSENT').length;
+
+        result.push({
+            lecture: {
+                _id: lecture._id,
+                date: lecture.date,
+                slot: lecture.timetableSlotId,
+            },
+            summary: {
+                total: entries.length,
+                present: presentCount,
+                absent: absentCount,
+            },
+            entries,
+        });
+    }
+
+    return result;
+};
+
+module.exports = {
+    createLecture,
+    uploadPhotos,
+    getMyAttendance,
+    getClassAttendance,
+};
