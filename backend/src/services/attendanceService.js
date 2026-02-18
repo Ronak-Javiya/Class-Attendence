@@ -2,8 +2,10 @@ const Lecture = require('../models/Lecture');
 const AttendanceRecord = require('../models/AttendanceRecord');
 const AttendanceEntry = require('../models/AttendanceEntry');
 const AttendancePhoto = require('../models/AttendancePhoto');
+const AttendanceOverride = require('../models/AttendanceOverride');
 const Class = require('../models/Class');
 const Timetable = require('../models/Timetable');
+const User = require('../models/User');
 const { processLectureAttendance } = require('../workers/attendanceWorker');
 const logger = require('../utils/logger');
 
@@ -238,9 +240,128 @@ const getClassAttendance = async (classId, user) => {
     return result;
 };
 
+// -------------------------------------------------------
+// Get Today's Lectures (Faculty)
+// -------------------------------------------------------
+const getTodaysLectures = async (userId, role) => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    let query = { date: today };
+    
+    if (role === 'FACULTY') {
+        // Get classes taught by this faculty
+        const classes = await Class.find({ facultyId: userId });
+        const classIds = classes.map(c => c._id);
+        query.classId = { $in: classIds };
+    }
+    
+    const lectures = await Lecture.find(query)
+        .populate('classId', 'name code')
+        .populate('timetableSlotId', 'dayOfWeek startTime endTime')
+        .sort({ 'timetableSlotId.startTime': 1 });
+    
+    return lectures;
+};
+
+// -------------------------------------------------------
+// Search Attendance (Admin/HOD)
+// -------------------------------------------------------
+const searchAttendance = async (query, user) => {
+    if (!query || query.length < 2) {
+        return [];
+    }
+    
+    const searchRegex = new RegExp(query, 'i');
+    
+    // Search by student name/email or class name
+    const students = await User.find({
+        role: 'STUDENT',
+        $or: [
+            { fullName: searchRegex },
+            { email: searchRegex },
+        ],
+    }).select('_id');
+    
+    const studentIds = students.map(s => s._id);
+    
+    const classes = await Class.find({
+        $or: [
+            { name: searchRegex },
+            { code: searchRegex },
+        ],
+    }).select('_id');
+    
+    const classIds = classes.map(c => c._id);
+    
+    // Build attendance query
+    let attendanceQuery = {
+        $or: [
+            { studentId: { $in: studentIds } },
+            { classId: { $in: classIds } },
+        ],
+    };
+    
+    // If HOD, restrict to their department
+    if (user.role === 'HOD' && user.departmentId) {
+        const deptClasses = await Class.find({ departmentId: user.departmentId });
+        const deptClassIds = deptClasses.map(c => c._id);
+        attendanceQuery.classId = { $in: deptClassIds };
+    }
+    
+    const entries = await AttendanceEntry.find(attendanceQuery)
+        .populate('studentId', 'fullName email')
+        .populate({
+            path: 'attendanceRecordId',
+            populate: {
+                path: 'lectureId',
+                select: 'date',
+            },
+        })
+        .populate('classId', 'name code')
+        .limit(50);
+    
+    return entries;
+};
+
+// -------------------------------------------------------
+// Get Overrides History (Admin/HOD)
+// -------------------------------------------------------
+const getOverridesHistory = async (user) => {
+    let query = {};
+    
+    // If HOD, restrict to their department
+    if (user.role === 'HOD' && user.departmentId) {
+        const classes = await Class.find({ departmentId: user.departmentId });
+        const classIds = classes.map(c => c._id);
+        
+        // Find entries for these classes
+        const entries = await AttendanceEntry.find({ classId: { $in: classIds } });
+        const entryIds = entries.map(e => e._id);
+        
+        query.attendanceEntryId = { $in: entryIds };
+    }
+    
+    const overrides = await AttendanceOverride.find(query)
+        .populate({
+            path: 'attendanceEntryId',
+            populate: [
+                { path: 'studentId', select: 'fullName email' },
+                { path: 'classId', select: 'name code' },
+            ],
+        })
+        .populate('approvedBy', 'fullName email role')
+        .sort({ approvedAt: -1 })
+        .limit(100);
+    
+    return overrides;
+};
+
 module.exports = {
     createLecture,
     uploadPhotos,
     getMyAttendance,
     getClassAttendance,
+    getTodaysLectures,
+    searchAttendance,
+    getOverridesHistory,
 };

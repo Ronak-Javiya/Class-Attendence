@@ -7,7 +7,7 @@ This file contains ONLY AI compute functions. No database, no storage, no attend
 Functions used by the service:
   - get_app(): Lazy-loads InsightFace model.
   - face_embed_from_bgr(img_bgr): Returns 512-d embedding for the largest face in an image.
-  - compute_student_embedding(student_folder): Aggregates 3+ images into a single mean embedding.
+  - compute_student_embedding(student_folder): Aggregates 5+ images into a single mean embedding.
   - detect_all_faces(img_bgr): Returns ALL face embeddings + bounding boxes from a classroom photo.
 """
 
@@ -60,7 +60,7 @@ def face_embed_from_bgr(img_bgr):
 def compute_student_embedding(student_folder):
     """
     Aggregate multiple images into a single mean embedding.
-    Returns (embedding, count) or (None, count) if < 3 valid faces found.
+    Returns (embedding, count) or (None, count) if < 5 valid faces found.
     """
     img_paths = [p for p in glob.glob(os.path.join(student_folder, "*"))
                  if p.lower().endswith((".jpg", ".jpeg", ".png"))]
@@ -75,7 +75,7 @@ def compute_student_embedding(student_folder):
         if emb is not None:
             emb_list.append(emb)
 
-    if len(emb_list) < 3:
+    if len(emb_list) < 5:
         return None, len(emb_list)
 
     E = np.vstack(emb_list)

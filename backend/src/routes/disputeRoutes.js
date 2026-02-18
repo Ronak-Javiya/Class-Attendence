@@ -42,4 +42,14 @@ router.post('/:id/resolve', requireRole(['FACULTY']), disputeController.resolveD
 // POST /disputes/override/:attendanceEntryId — Direct override
 router.post('/override/:attendanceEntryId', requireRole(['ADMIN', 'HOD']), disputeController.overrideAttendance);
 
+// -------------------------------------------------------
+// Additional Faculty APIs
+// -------------------------------------------------------
+
+// GET /disputes/pending — Get pending disputes for faculty
+router.get('/pending', requireRole(['FACULTY']), disputeController.getPendingDisputes);
+
+// GET /disputes/faculty — Get all disputes for faculty's classes
+router.get('/faculty', requireRole(['FACULTY']), disputeController.getFacultyDisputes);
+
 module.exports = router;

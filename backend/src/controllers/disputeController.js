@@ -1,4 +1,5 @@
 const disputeService = require('../services/disputeService');
+const Class = require('../models/Class');
 const { validateCreateDispute, validateResolveDispute, validateOverride } = require('../validators/disputeValidator');
 
 // -------------------------------------------------------
@@ -98,6 +99,54 @@ const getEffectiveAttendance = async (req, res, next) => {
     }
 };
 
+// -------------------------------------------------------
+// Faculty: Get Pending Disputes Count
+// -------------------------------------------------------
+const getPendingDisputes = async (req, res, next) => {
+    try {
+        const user = req.user;
+        let query = { status: 'OPEN' };
+        
+        // If faculty, restrict to their classes
+        if (user.role === 'FACULTY') {
+            const classes = await Class.find({ facultyId: user.userId });
+            const classIds = classes.map(c => c._id);
+            query.classId = { $in: classIds };
+        }
+        
+        const disputes = await AttendanceDispute.find(query)
+            .populate('studentId', 'fullName email')
+            .populate('classId', 'name code')
+            .populate('lectureId', 'date')
+            .sort({ createdAt: -1 });
+        
+        res.status(200).json({ success: true, data: disputes });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// -------------------------------------------------------
+// Faculty: Get All Faculty Disputes
+// -------------------------------------------------------
+const getFacultyDisputes = async (req, res, next) => {
+    try {
+        const user = req.user;
+        const classes = await Class.find({ facultyId: user.userId });
+        const classIds = classes.map(c => c._id);
+        
+        const disputes = await AttendanceDispute.find({ classId: { $in: classIds } })
+            .populate('studentId', 'fullName email')
+            .populate('classId', 'name code')
+            .populate('lectureId', 'date')
+            .sort({ status: 1, createdAt: -1 });
+        
+        res.status(200).json({ success: true, data: disputes });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     raiseDispute,
     getMyDisputes,
@@ -105,4 +154,6 @@ module.exports = {
     resolveDispute,
     overrideAttendance,
     getEffectiveAttendance,
+    getPendingDisputes,
+    getFacultyDisputes,
 };

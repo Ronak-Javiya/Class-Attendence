@@ -22,6 +22,9 @@ router.get('/my', requireRole(['STUDENT']), enrollmentController.getMyEnrollment
 // Admin APIs
 // -------------------------------------------------------
 
+// GET /enrollments — Admin views all enrollments with optional status filter
+router.get('/', requireRole(['ADMIN']), enrollmentController.getAllEnrollments);
+
 // GET /enrollments/pending — Admin views pending requests
 router.get('/pending', requireRole(['ADMIN']), enrollmentController.getPendingEnrollments);
 

@@ -1,12 +1,13 @@
 const rateLimit = require('express-rate-limit');
+const config = require('../config');
 
 /**
  * Rate limiter specifically for login attempts.
  * Prevents brute-force attacks by limiting requests per IP.
  */
 const loginRateLimiter = rateLimit({
-    windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // Default: 15 minutes
-    max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX, 10) || 10, // Default: 10 attempts
+    windowMs: config.rateLimiting.login.windowMs,
+    max: config.rateLimiting.login.max,
     message: {
         success: false,
         message: 'Too many login attempts. Please try again later.',

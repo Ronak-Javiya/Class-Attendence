@@ -11,8 +11,8 @@
  *
  * Usage: node src/scripts/test-enrollment.js
  */
-require('dotenv').config();
 const mongoose = require('mongoose');
+const config = require('../config');
 const User = require('../models/User');
 const Class = require('../models/Class');
 const Timetable = require('../models/Timetable');
@@ -23,7 +23,7 @@ const Department = require('../models/Department');
 
 const test = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(config.database.mongodb.uri);
         console.log('[Test] Connected to MongoDB\n');
 
         // Get test users

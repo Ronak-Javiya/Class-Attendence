@@ -4,8 +4,8 @@
  *
  * Usage: node src/scripts/test-academic.js
  */
-require('dotenv').config();
 const mongoose = require('mongoose');
+const config = require('../config');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const Class = require('../models/Class');
@@ -14,7 +14,7 @@ const classService = require('../services/classService');
 
 const test = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(config.database.mongodb.uri);
         console.log('[Test] Connected to MongoDB\n');
 
         // Get test users

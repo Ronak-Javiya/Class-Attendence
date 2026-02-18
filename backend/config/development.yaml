@@ -1,0 +1,10 @@
+# ============================================
+# Development Environment Configuration
+# ============================================
+# Committed to repo - no secrets here
+
+server:
+  env: development
+
+aiService:
+  url: http://localhost:8000

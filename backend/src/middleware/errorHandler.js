@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const config = require('../config');
 
 /**
  * Centralized Error Handler
@@ -45,7 +46,7 @@ const errorHandler = (err, req, res, next) => {
     res.status(statusCode).json({
         success: false,
         message,
-        ...(process.env.NODE_ENV === 'development' && statusCode === 500 && { debug: err.message, stack: err.stack }),
+        ...(config.server.env === 'development' && statusCode === 500 && { debug: err.message, stack: err.stack }),
     });
 };
 

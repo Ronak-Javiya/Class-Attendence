@@ -1,107 +1,320 @@
 /**
- * StudentDisputes — Raise and view disputes on ABSENT records.
+ * StudentDisputes — Modern attendance dispute management
  */
+
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listVariants, listItemVariants } from '../../shared/motion/variants'
-import api from '../../api/axios'
-import { AlertTriangle, Send, Loader2 } from 'lucide-react'
+import { listVariants, listItemVariants } from '@/lib/animations'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/primitives/Card'
+import { Badge } from '@/components/primitives/Badge'
+import { Button } from '@/components/primitives/Button'
+import { Input } from '@/components/primitives/Input'
+import { EmptyState } from '@/components/composite/EmptyState'
+import { StatCard } from '@/components/composite/StatCard'
+import api from '@/api/axios'
+import {
+  AlertTriangle,
+  Send,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Shield,
+  MessageSquare,
+  AlertCircle,
+} from 'lucide-react'
+import { formatDate, cn } from '@/lib/utils'
+
+interface Dispute {
+  _id: string
+  status: 'OPEN' | 'FACULTY_APPROVED' | 'FACULTY_REJECTED' | 'ADMIN_OVERRIDDEN'
+  reason: string
+  createdAt: string
+  updatedAt: string
+  attendanceEntryId?: {
+    lectureId?: {
+      classId?: {
+        title: string
+        classCode: string
+      }
+      date: string
+    }
+    status: string
+  }
+  facultyNote?: string
+}
 
 export default function StudentDisputes() {
-    const queryClient = useQueryClient()
-    const [entryId, setEntryId] = useState('')
-    const [reason, setReason] = useState('')
+  const queryClient = useQueryClient()
+  const [entryId, setEntryId] = useState('')
+  const [reason, setReason] = useState('')
+  const [activeTab, setActiveTab] = useState<'all' | 'open' | 'resolved'>('all')
 
-    const { data: disputes, isLoading } = useQuery({
-        queryKey: ['student-disputes'],
-        queryFn: () => api.get('/disputes/my').then((r) => r.data.data),
-    })
+  const { data: disputes, isLoading } = useQuery<Dispute[]>({
+    queryKey: ['student-disputes'],
+    queryFn: () => api.get('/disputes/my').then((r) => r.data.data),
+  })
 
-    const raiseMutation = useMutation({
-        mutationFn: () => api.post('/disputes', { attendanceEntryId: entryId, reason }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['student-disputes'] })
-            setEntryId('')
-            setReason('')
-        },
-    })
+  const raiseMutation = useMutation({
+    mutationFn: () => api.post('/disputes', { attendanceEntryId: entryId, reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student-disputes'] })
+      setEntryId('')
+      setReason('')
+    },
+  })
 
-    const statusColor: Record<string, string> = {
-        OPEN: 'bg-amber-100 text-amber-700',
-        FACULTY_APPROVED: 'bg-emerald-100 text-emerald-700',
-        FACULTY_REJECTED: 'bg-red-100 text-red-700',
-        ADMIN_OVERRIDDEN: 'bg-purple-100 text-purple-700',
+  // Calculate stats
+  const stats = {
+    total: disputes?.length || 0,
+    open: disputes?.filter((d) => d.status === 'OPEN').length || 0,
+    approved:
+      disputes?.filter((d) => d.status === 'FACULTY_APPROVED' || d.status === 'ADMIN_OVERRIDDEN')
+        .length || 0,
+    rejected: disputes?.filter((d) => d.status === 'FACULTY_REJECTED').length || 0,
+  }
+
+  // Filter disputes
+  const filteredDisputes = disputes?.filter((dispute) => {
+    if (activeTab === 'open') return dispute.status === 'OPEN'
+    if (activeTab === 'resolved')
+      return ['FACULTY_APPROVED', 'FACULTY_REJECTED', 'ADMIN_OVERRIDDEN'].includes(dispute.status)
+    return true
+  })
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'OPEN':
+        return { variant: 'warning' as const, icon: Clock, label: 'Under Review' }
+      case 'FACULTY_APPROVED':
+        return { variant: 'success' as const, icon: CheckCircle, label: 'Approved' }
+      case 'ADMIN_OVERRIDDEN':
+        return { variant: 'success' as const, icon: Shield, label: 'Admin Approved' }
+      case 'FACULTY_REJECTED':
+        return { variant: 'error' as const, icon: XCircle, label: 'Rejected' }
+      default:
+        return { variant: 'default' as const, icon: AlertCircle, label: status }
     }
+  }
 
-    return (
-        <div>
-            <h1 className="text-2xl font-bold text-surface-900 mb-6">Attendance Disputes</h1>
+  const getStatusMessage = (dispute: Dispute) => {
+    switch (dispute.status) {
+      case 'OPEN':
+        return 'Your dispute is being reviewed by faculty. You will be notified once a decision is made.'
+      case 'FACULTY_APPROVED':
+        return 'Your dispute has been approved by faculty. Your attendance has been updated.'
+      case 'ADMIN_OVERRIDDEN':
+        return 'An administrator has reviewed and approved your dispute.'
+      case 'FACULTY_REJECTED':
+        return dispute.facultyNote
+          ? `Rejected: ${dispute.facultyNote}`
+          : 'Your dispute was not approved. The original attendance record stands.'
+      default:
+        return ''
+    }
+  }
 
-            {/* Raise Dispute Form */}
-            <div className="bg-white rounded-xl p-5 border border-surface-200 mb-8">
-                <h3 className="text-sm font-semibold text-surface-800 mb-4 flex items-center gap-2">
-                    <AlertTriangle size={16} /> Raise a Dispute
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                    <input
-                        type="text"
-                        placeholder="Attendance Entry ID"
-                        value={entryId}
-                        onChange={(e) => setEntryId(e.target.value)}
-                        className="px-4 py-2.5 border border-surface-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Reason for dispute"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        className="px-4 py-2.5 border border-surface-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                </div>
-                {raiseMutation.isError && (
-                    <p className="text-sm text-red-600 mb-3">
-                        {(raiseMutation.error as any)?.response?.data?.message || 'Failed to raise dispute.'}
-                    </p>
-                )}
-                <button
-                    onClick={() => raiseMutation.mutate()}
-                    disabled={!entryId || !reason || raiseMutation.isPending}
-                    className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                    {raiseMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    Submit Dispute
-                </button>
-            </div>
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <PageHeader
+        title="Attendance Disputes"
+        description="Raise disputes for incorrect attendance records and track their status"
+      />
 
-            {/* Disputes List */}
-            <h2 className="text-lg font-semibold text-surface-800 mb-4">My Disputes</h2>
-            {isLoading ? (
-                <div className="space-y-3">{[1, 2].map((i) => <div key={i} className="skeleton h-16 rounded-lg" />)}</div>
-            ) : (
-                <motion.div variants={listVariants} initial="initial" animate="animate" className="space-y-3">
-                    {(disputes ?? []).map((d: any) => (
-                        <motion.div
-                            key={d._id}
-                            variants={listItemVariants}
-                            className="bg-white rounded-lg p-4 border border-surface-200 flex items-center justify-between"
-                        >
-                            <div>
-                                <p className="font-medium text-surface-800 text-sm">{d.reason}</p>
-                                <p className="text-xs text-surface-400 mt-1">
-                                    {new Date(d.createdAt).toLocaleDateString('en-IN')}
-                                </p>
-                            </div>
-                            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColor[d.status] || 'bg-surface-100 text-surface-600'}`}>
-                                {d.status}
-                            </span>
-                        </motion.div>
-                    ))}
-                    {!disputes?.length && (
-                        <p className="text-sm text-surface-400 py-8 text-center">No disputes raised yet.</p>
-                    )}
-                </motion.div>
-            )}
+      {/* Statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Disputes"
+          value={isLoading ? '-' : stats.total}
+          icon={<MessageSquare className="w-5 h-5" />}
+          iconBgColor="#F1F5F9"
+          iconColor="#64748B"
+        />
+        <StatCard
+          title="Under Review"
+          value={isLoading ? '-' : stats.open}
+          icon={<Clock className="w-5 h-5" />}
+          iconBgColor="#FFFBEB"
+          iconColor="#F59E0B"
+        />
+        <StatCard
+          title="Approved"
+          value={isLoading ? '-' : stats.approved}
+          icon={<CheckCircle className="w-5 h-5" />}
+          iconBgColor="#ECFDF5"
+          iconColor="#10B981"
+        />
+        <StatCard
+          title="Rejected"
+          value={isLoading ? '-' : stats.rejected}
+          icon={<XCircle className="w-5 h-5" />}
+          iconBgColor="#FEF2F2"
+          iconColor="#EF4444"
+        />
+      </div>
+
+      {/* Raise Dispute Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-warning-600" />
+            Raise a New Dispute
+          </CardTitle>
+          <CardDescription>
+            If you believe your attendance was incorrectly recorded, you can raise a dispute with
+            supporting details.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <Input
+              label="Attendance Entry ID"
+              placeholder="Enter the attendance record ID"
+              value={entryId}
+              onChange={(e) => setEntryId(e.target.value)}
+            />
+            <Input
+              label="Reason for Dispute"
+              placeholder="Explain why this attendance record is incorrect"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+
+          {raiseMutation.isError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-4 rounded-lg bg-error-50 border border-error-200 flex items-start gap-3"
+            >
+              <AlertTriangle className="w-5 h-5 text-error-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-error-700">
+                {(raiseMutation.error as any)?.response?.data?.message ||
+                  'Failed to raise dispute. Please try again.'}
+              </p>
+            </motion.div>
+          )}
+
+          <Button
+            onClick={() => raiseMutation.mutate()}
+            disabled={!entryId || !reason || raiseMutation.isPending}
+            isLoading={raiseMutation.isPending}
+            loadingText="Submitting..."
+            leftIcon={<Send className="w-4 h-4" />}
+          >
+            Submit Dispute
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <div className="border-b border-surface-200">
+        <nav className="flex gap-6">
+          {(['all', 'open', 'resolved'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'pb-3 text-sm font-medium capitalize transition-colors relative',
+                activeTab === tab
+                  ? 'text-primary-600'
+                  : 'text-surface-500 hover:text-surface-700'
+              )}
+            >
+              {tab}
+              {activeTab === tab && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"
+                />
+              )}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Disputes List */}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-surface-100 rounded-xl animate-pulse" />
+          ))}
         </div>
-    )
+      ) : filteredDisputes && filteredDisputes.length > 0 ? (
+        <motion.div variants={listVariants} initial="initial" animate="animate" className="space-y-4">
+          {filteredDisputes.map((dispute) => {
+            const statusConfig = getStatusConfig(dispute.status)
+            const StatusIcon = statusConfig.icon
+
+            return (
+              <motion.div key={dispute._id} variants={listItemVariants}>
+                <Card variant="interactive" padding="md">
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                    {/* Status Icon */}
+                    <div
+                      className={cn(
+                        'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
+                        dispute.status === 'OPEN' && 'bg-warning-100 text-warning-600',
+                        dispute.status === 'FACULTY_APPROVED' && 'bg-success-100 text-success-600',
+                        dispute.status === 'ADMIN_OVERRIDDEN' && 'bg-success-100 text-success-600',
+                        dispute.status === 'FACULTY_REJECTED' && 'bg-error-100 text-error-600'
+                      )}
+                    >
+                      <StatusIcon className="w-6 h-6" />
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="font-semibold text-surface-900">{dispute.reason}</h3>
+                          {dispute.attendanceEntryId?.lectureId?.classId && (
+                            <p className="text-sm text-surface-500 mt-1">
+                              {dispute.attendanceEntryId.lectureId.classId.title} (
+                              {dispute.attendanceEntryId.lectureId.classId.classCode})
+                            </p>
+                          )}
+                          <p className="text-xs text-surface-400 mt-1">
+                            Raised on {formatDate(dispute.createdAt)}
+                          </p>
+                        </div>
+                        <Badge variant={statusConfig.variant} size="sm">
+                          {statusConfig.label}
+                        </Badge>
+                      </div>
+
+                      {/* Status Message */}
+                      <div
+                        className={cn(
+                          'mt-4 p-3 rounded-lg text-sm',
+                          dispute.status === 'OPEN' && 'bg-warning-50 text-warning-700',
+                          dispute.status === 'FACULTY_APPROVED' && 'bg-success-50 text-success-700',
+                          dispute.status === 'ADMIN_OVERRIDDEN' && 'bg-success-50 text-success-700',
+                          dispute.status === 'FACULTY_REJECTED' && 'bg-error-50 text-error-700'
+                        )}
+                      >
+                        {getStatusMessage(dispute)}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </motion.div>
+      ) : (
+        <EmptyState
+          icon="alert"
+          title={activeTab === 'all' ? 'No disputes yet' : `No ${activeTab} disputes`}
+          description={
+            activeTab === 'all'
+              ? "You haven't raised any attendance disputes. If you notice an incorrect attendance record, use the form above to raise a dispute."
+              : `You don't have any ${activeTab} disputes at the moment.`
+          }
+        />
+      )}
+    </div>
+  )
 }

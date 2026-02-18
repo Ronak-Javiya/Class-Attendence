@@ -38,7 +38,7 @@ const upload = multer({
 });
 
 // -------------------------------------------------------
-// POST /api/face/enroll — Student uploads 3+ face photos
+// POST /api/face/enroll — Student uploads 5+ face photos
 // -------------------------------------------------------
 router.post(
     '/enroll',
@@ -47,14 +47,14 @@ router.post(
     upload.array('images', 10), // Max 10 images
     async (req, res, next) => {
         try {
-            if (!req.files || req.files.length < 3) {
+            if (!req.files || req.files.length < 5) {
                 // Clean up any uploaded files
                 if (req.files) {
                     req.files.forEach(f => fs.unlinkSync(f.path));
                 }
                 return res.status(400).json({
                     success: false,
-                    message: 'At least 3 face images are required.',
+                    message: 'At least 5 face images are required from different angles.',
                 });
             }
 

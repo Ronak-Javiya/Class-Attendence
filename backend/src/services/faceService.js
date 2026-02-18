@@ -4,13 +4,14 @@ const fs = require('fs');
 const StudentEmbedding = require('../models/StudentEmbedding');
 const Enrollment = require('../models/Enrollment');
 const logger = require('../utils/logger');
+const config = require('../config');
 
 // -------------------------------------------------------
 // Config
 // -------------------------------------------------------
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-const COSINE_THRESHOLD = parseFloat(process.env.COSINE_THRESHOLD || '0.55');
-const AI_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '60000', 10);
+const AI_SERVICE_URL = config.aiService.url;
+const COSINE_THRESHOLD = config.aiService.cosineThreshold;
+const AI_TIMEOUT_MS = config.aiService.timeoutMs;
 
 // -------------------------------------------------------
 // Helper: Cosine Similarity

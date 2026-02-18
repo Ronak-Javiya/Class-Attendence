@@ -1,21 +1,26 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const config = require('./config');
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
+const registrationRoutes = require('./routes/registrationRoutes');
 const departmentRoutes = require('./routes/departmentRoutes');
 const classRoutes = require('./routes/classRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const disputeRoutes = require('./routes/disputeRoutes');
 const faceRoutes = require('./routes/faceRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const hodRoutes = require('./routes/hodRoutes');
 const logger = require('./utils/logger');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = config.server.port;
 
 // -------------------------------------------------------
 // Global Middleware
@@ -39,12 +44,17 @@ app.get('/health', (req, res) => {
 // API Routes
 // -------------------------------------------------------
 app.use('/api/auth', authRoutes);
+app.use('/api/register', registrationRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api', attendanceRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/face', faceRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/hod', hodRoutes);
 
 // -------------------------------------------------------
 // 404 Handler
@@ -67,7 +77,7 @@ app.use(errorHandler);
 const startServer = async () => {
     await connectDB();
     app.listen(PORT, () => {
-        logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+        logger.info(`Server running on port ${PORT} in ${config.server.env} mode`);
     });
 };
 

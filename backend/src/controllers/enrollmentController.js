@@ -31,6 +31,42 @@ const getMyEnrollments = async (req, res, next) => {
 };
 
 // -------------------------------------------------------
+// Admin: List All Enrollments with Status Filter
+// -------------------------------------------------------
+const getAllEnrollments = async (req, res, next) => {
+    try {
+        const { status, classId, departmentId } = req.query;
+        
+        let enrollments;
+        if (status === 'PENDING') {
+            enrollments = await enrollmentService.getPendingEnrollments({ classId, departmentId });
+        } else if (status) {
+            // Filter by specific status
+            const Enrollment = require('../models/Enrollment');
+            const query = { status };
+            if (classId) query.classId = classId;
+            enrollments = await Enrollment.find(query)
+                .populate('studentId', 'fullName email')
+                .populate('classId', 'name code')
+                .sort({ createdAt: -1 });
+        } else {
+            // Get all enrollments
+            const Enrollment = require('../models/Enrollment');
+            const query = {};
+            if (classId) query.classId = classId;
+            enrollments = await Enrollment.find(query)
+                .populate('studentId', 'fullName email')
+                .populate('classId', 'name code')
+                .sort({ createdAt: -1 });
+        }
+        
+        res.status(200).json({ success: true, data: enrollments });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// -------------------------------------------------------
 // Admin: List Pending Enrollments
 // -------------------------------------------------------
 const getPendingEnrollments = async (req, res, next) => {
@@ -93,6 +129,7 @@ const getClassStudents = async (req, res, next) => {
 module.exports = {
     requestEnrollment,
     getMyEnrollments,
+    getAllEnrollments,
     getPendingEnrollments,
     approveEnrollment,
     rejectEnrollment,

@@ -48,16 +48,16 @@ async def student_embedding(
     images: list[UploadFile] = File(...),
 ):
     """
-    Generate a single mean embedding from 3+ student face images.
+    Generate a single mean embedding from 5+ student face images.
 
     Input:
       - studentId (form field)
-      - images[] (3+ image files)
+      - images[] (5+ image files)
 
     Output:
       { "studentId": "...", "embedding": [512 floats], "imagesUsed": N }
 
-    Rejects if < 3 valid face embeddings can be extracted.
+    Rejects if < 5 valid face embeddings can be extracted.
     """
     # Create a temporary folder for this request
     request_id = str(uuid.uuid4())
@@ -78,7 +78,7 @@ async def student_embedding(
         if embedding is None:
             raise HTTPException(
                 status_code=422,
-                detail=f"Could not extract 3+ valid face embeddings. Only {images_used} found. Please upload clearer photos.",
+                detail=f"Could not extract 5+ valid face embeddings. Only {images_used} found. Please upload clearer photos.",
             )
 
         return JSONResponse(content={

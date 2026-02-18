@@ -5,8 +5,8 @@
  *
  * Safe to run multiple times — skips existing records.
  */
-require('dotenv').config();
 const mongoose = require('mongoose');
+const config = require('../config');
 const User = require('../models/User');
 const Department = require('../models/Department');
 
@@ -39,7 +39,7 @@ const SEED_USERS = [
 
 const seed = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(config.database.mongodb.uri);
         console.log('[Seed] Connected to MongoDB');
 
         // ---- Seed Users ----

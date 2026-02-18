@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const config = require('../config');
 
 /**
  * Authentication Middleware — requireAuth
@@ -22,7 +23,7 @@ const requireAuth = async (req, res, next) => {
         const token = authHeader.split(' ')[1];
 
         // Verify token signature and expiry
-        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+        const decoded = jwt.verify(token, config.jwt.access.secret);
 
         // Fetch user to ensure they still exist and are active
         const user = await User.findById(decoded.userId);

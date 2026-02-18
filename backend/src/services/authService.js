@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const config = require('../config');
 
 const SALT_ROUNDS = 12;
 
@@ -15,8 +16,8 @@ const SALT_ROUNDS = 12;
 const generateAccessToken = (user) => {
     return jwt.sign(
         { userId: user._id, role: user.role },
-        process.env.JWT_ACCESS_SECRET,
-        { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
+        config.jwt.access.secret,
+        { expiresIn: config.jwt.access.expiry }
     );
 };
 
@@ -26,8 +27,8 @@ const generateAccessToken = (user) => {
 const generateRefreshToken = (user) => {
     return jwt.sign(
         { userId: user._id },
-        process.env.JWT_REFRESH_SECRET,
-        { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
+        config.jwt.refresh.secret,
+        { expiresIn: config.jwt.refresh.expiry }
     );
 };
 
@@ -58,6 +59,13 @@ const login = async (email, password) => {
     // Check if user is active
     if (!user.isActive) {
         const err = new Error('Account is deactivated. Contact your administrator.');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    // Check if Admin is approved by HoD
+    if (user.role === 'ADMIN' && !user.isApproved) {
+        const err = new Error('Your registration is pending HoD approval. Please wait for confirmation.');
         err.statusCode = 403;
         throw err;
     }
@@ -107,7 +115,7 @@ const refresh = async (refreshToken) => {
     // Verify JWT signature and expiry
     let decoded;
     try {
-        decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        decoded = jwt.verify(refreshToken, config.jwt.refresh.secret);
     } catch (jwtError) {
         const err = new Error('Invalid or expired refresh token');
         err.statusCode = 401;

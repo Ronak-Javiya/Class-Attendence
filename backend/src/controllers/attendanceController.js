@@ -69,9 +69,49 @@ const getClassAttendance = async (req, res, next) => {
     }
 };
 
+// -------------------------------------------------------
+// Faculty: Get Today's Lectures
+// -------------------------------------------------------
+const getTodaysLectures = async (req, res, next) => {
+    try {
+        const lectures = await attendanceService.getTodaysLectures(req.user.userId, req.user.role);
+        res.status(200).json({ success: true, data: lectures });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// -------------------------------------------------------
+// Admin/HOD: Search Attendance
+// -------------------------------------------------------
+const searchAttendance = async (req, res, next) => {
+    try {
+        const { q } = req.query;
+        const results = await attendanceService.searchAttendance(q, req.user);
+        res.status(200).json({ success: true, data: results });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// -------------------------------------------------------
+// Admin/HOD: Get Overrides History
+// -------------------------------------------------------
+const getOverridesHistory = async (req, res, next) => {
+    try {
+        const history = await attendanceService.getOverridesHistory(req.user);
+        res.status(200).json({ success: true, data: history });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createLecture,
     uploadPhotos,
     getMyAttendance,
     getClassAttendance,
+    getTodaysLectures,
+    searchAttendance,
+    getOverridesHistory,
 };

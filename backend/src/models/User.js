@@ -42,6 +42,28 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        /**
+         * Registration lifecycle:
+         *  PENDING  – Pre-seeded from Excel (no password yet)
+         *  ACTIVE   – User has completed registration
+         */
+        registrationStatus: {
+            type: String,
+            enum: ['PENDING', 'ACTIVE'],
+            default: 'ACTIVE',
+        },
+        /**
+         * Admin-specific: requires HOD approval before they can log in.
+         * true for HOD, FACULTY, STUDENT by default; false for newly-registered ADMIN.
+         */
+        isApproved: {
+            type: Boolean,
+            default: true,
+        },
+        // ---- Optional metadata (populated from Excel) ----
+        contactNo: { type: String, default: null, trim: true },
+        enrollmentNo: { type: String, default: null, trim: true, sparse: true },
+        currentSem: { type: Number, default: null },
         refreshTokenHash: {
             type: String,
             default: null,
