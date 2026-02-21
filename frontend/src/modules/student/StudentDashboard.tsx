@@ -353,8 +353,8 @@ export default function StudentDashboard() {
                       enrollment.status === 'APPROVED'
                         ? 'success'
                         : enrollment.status === 'REJECTED'
-                        ? 'error'
-                        : 'warning'
+                          ? 'error'
+                          : 'warning'
                     }
                     size="sm"
                   >

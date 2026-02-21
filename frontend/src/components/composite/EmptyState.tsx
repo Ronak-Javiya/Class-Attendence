@@ -5,8 +5,10 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/primitives/Button';
 import { Package, Search, FileX, Users, Calendar, ClipboardList } from 'lucide-react';
+import { emptyStateVariants, slideUpVariants } from '@/lib/animations';
 
 export type EmptyStateIcon = 'default' | 'search' | 'file' | 'users' | 'calendar' | 'clipboard';
 
@@ -53,19 +55,24 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
     const Icon = getIcon(icon);
 
     return (
-      <div
+      <motion.div
         ref={ref}
         className={cn(
           'flex flex-col items-center justify-center text-center',
           compact ? 'py-8 px-4' : 'py-16 px-4',
           className
         )}
+        variants={emptyStateVariants}
+        initial="initial"
+        animate="animate"
       >
-        <div
+        <motion.div
           className={cn(
             'rounded-full bg-surface-100 flex items-center justify-center mb-4',
             compact ? 'w-12 h-12' : 'w-16 h-16'
           )}
+          animate="float"
+          variants={emptyStateVariants}
         >
           <div
             className={cn(
@@ -75,37 +82,52 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
           >
             {Icon}
           </div>
-        </div>
+        </motion.div>
 
-        <h3
+        <motion.h3
           className={cn(
             'font-semibold text-surface-900 mb-1',
             compact ? 'text-base' : 'text-lg'
           )}
+          variants={slideUpVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.1 }}
         >
           {title}
-        </h3>
+        </motion.h3>
 
-        <p
+        <motion.p
           className={cn(
             'text-surface-500 max-w-sm',
             compact ? 'text-sm' : 'text-base'
           )}
+          variants={slideUpVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.15 }}
         >
           {description}
-        </p>
+        </motion.p>
 
         {actionLabel && onAction && (
-          <Button
-            variant="primary"
-            size={compact ? 'sm' : 'md'}
-            className="mt-4"
-            onClick={onAction}
+          <motion.div
+            variants={slideUpVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.2 }}
           >
-            {actionLabel}
-          </Button>
+            <Button
+              variant="primary"
+              size={compact ? 'sm' : 'md'}
+              className="mt-4"
+              onClick={onAction}
+            >
+              {actionLabel}
+            </Button>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     );
   }
 );

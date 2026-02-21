@@ -9,6 +9,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { spinnerVariants } from '@/lib/animations';
 
 const buttonVariants = cva(
   // Base styles
@@ -50,12 +51,13 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   isLoading?: boolean;
   loadingText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  fullWidth?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -69,6 +71,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       loadingText,
       leftIcon,
       rightIcon,
+      fullWidth = false,
       children,
       disabled,
       ...props
@@ -81,17 +84,23 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <motion.div
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.1 }}
-        className="inline-block"
+        className={cn('inline-block', fullWidth && 'w-full')}
       >
         <Comp
-          className={cn(buttonVariants({ variant, size, className }))}
+          className={cn(buttonVariants({ variant, size, className }), fullWidth && 'w-full')}
           ref={ref}
           disabled={disabled || isLoading}
           {...props}
         >
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <motion.span
+                variants={spinnerVariants}
+                animate="animate"
+                className="inline-flex"
+              >
+                <Loader2 className="h-4 w-4" />
+              </motion.span>
               {loadingText || children}
             </>
           ) : (

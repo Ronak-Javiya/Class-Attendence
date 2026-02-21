@@ -1,10 +1,11 @@
 /**
  * StudentAttendance — Modern attendance tracking and history
+ * Includes inline "Raise Dispute" functionality per record
  */
 
 import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { useQuery } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listVariants, listItemVariants } from '@/lib/animations'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/primitives/Card'
@@ -25,6 +26,8 @@ import {
   BookOpen,
   ChevronRight,
   AlertTriangle,
+  Send,
+  X,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -46,13 +49,30 @@ interface AttendanceRecord {
 }
 
 export default function StudentAttendance() {
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [classFilter, setClassFilter] = useState<string>('all')
 
+  // Dispute modal state
+  const [disputeModalOpen, setDisputeModalOpen] = useState(false)
+  const [disputeEntryId, setDisputeEntryId] = useState('')
+  const [disputeReason, setDisputeReason] = useState('')
+
   const { data: attendance, isLoading } = useQuery<AttendanceRecord[]>({
     queryKey: ['student-attendance'],
     queryFn: () => api.get('/attendance/my').then((r) => r.data.data),
+  })
+
+  const raiseMutation = useMutation({
+    mutationFn: () =>
+      api.post('/disputes', { attendanceEntryId: disputeEntryId, reason: disputeReason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student-disputes'] })
+      setDisputeModalOpen(false)
+      setDisputeEntryId('')
+      setDisputeReason('')
+    },
   })
 
   // Calculate statistics
@@ -109,6 +129,13 @@ export default function StudentAttendance() {
       label: `${cls.title} (${cls.classCode})`,
     })),
   ]
+
+  const openDisputeModal = (recordId: string) => {
+    setDisputeEntryId(recordId)
+    setDisputeReason('')
+    raiseMutation.reset()
+    setDisputeModalOpen(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -250,11 +277,10 @@ export default function StudentAttendance() {
                   <div className="flex items-center gap-4">
                     {/* Status Icon */}
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        record.status === 'PRESENT'
-                          ? 'bg-success-100 text-success-600'
-                          : 'bg-error-100 text-error-600'
-                      }`}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${record.status === 'PRESENT'
+                        ? 'bg-success-100 text-success-600'
+                        : 'bg-error-100 text-error-600'
+                        }`}
                     >
                       {record.status === 'PRESENT' ? (
                         <CheckCircle className="w-6 h-6" />
@@ -290,13 +316,12 @@ export default function StudentAttendance() {
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-surface-200 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${
-                              confidenceScore >= 80
-                                ? 'bg-success-500'
-                                : confidenceScore >= 60
+                            className={`h-full rounded-full transition-all ${confidenceScore >= 80
+                              ? 'bg-success-500'
+                              : confidenceScore >= 60
                                 ? 'bg-warning-500'
                                 : 'bg-error-500'
-                            }`}
+                              }`}
                             style={{ width: `${confidenceScore}%` }}
                           />
                         </div>
@@ -306,10 +331,21 @@ export default function StudentAttendance() {
                       </div>
                     </div>
 
-                    {/* Action */}
-                    <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
-                      Details
-                    </Button>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDisputeModal(record._id)}
+                        leftIcon={<AlertTriangle className="w-4 h-4" />}
+                        className="text-warning-600 hover:bg-warning-50"
+                      >
+                        <span className="hidden md:inline">Dispute</span>
+                      </Button>
+                      <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
+                        Details
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </motion.div>
@@ -343,6 +379,102 @@ export default function StudentAttendance() {
           </div>
         </div>
       </Card>
+
+      {/* Raise Dispute Modal */}
+      <AnimatePresence>
+        {disputeModalOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setDisputeModalOpen(false)}
+            />
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div
+                className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-warning-600" />
+                    <h3 className="text-lg font-semibold text-surface-900">
+                      Raise a Dispute
+                    </h3>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setDisputeModalOpen(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <Input
+                    label="Attendance Entry ID"
+                    value={disputeEntryId}
+                    onChange={(e) => setDisputeEntryId(e.target.value)}
+                    disabled
+                  />
+                  <Input
+                    label="Reason for Dispute"
+                    placeholder="Explain why this attendance record is incorrect"
+                    value={disputeReason}
+                    onChange={(e) => setDisputeReason(e.target.value)}
+                  />
+
+                  {raiseMutation.isError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-lg bg-error-50 border border-error-200 flex items-start gap-3"
+                    >
+                      <AlertTriangle className="w-5 h-5 text-error-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-error-700">
+                        {(raiseMutation.error as any)?.response?.data?.message ||
+                          'Failed to raise dispute. Please try again.'}
+                      </p>
+                    </motion.div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => setDisputeModalOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      className="flex-1"
+                      onClick={() => raiseMutation.mutate()}
+                      disabled={!disputeReason || raiseMutation.isPending}
+                      isLoading={raiseMutation.isPending}
+                      loadingText="Submitting..."
+                      leftIcon={<Send className="w-4 h-4" />}
+                    >
+                      Submit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

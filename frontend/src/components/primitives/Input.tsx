@@ -7,6 +7,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
+import { shakeVariants } from '@/lib/animations';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -56,7 +57,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
 
-        <div className="relative">
+        <motion.div
+          className="relative"
+          variants={shakeVariants}
+          initial="initial"
+          animate={hasError ? 'shake' : 'initial'}
+        >
           {leftIcon && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none">
               {leftIcon}
@@ -93,7 +99,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               {rightIcon}
             </div>
           )}
-        </div>
+        </motion.div>
 
         <AnimatePresence mode="wait">
           {hasError ? (

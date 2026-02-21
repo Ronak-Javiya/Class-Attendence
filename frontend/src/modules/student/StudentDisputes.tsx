@@ -4,19 +4,15 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { listVariants, listItemVariants } from '@/lib/animations'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/primitives/Card'
+import { Card } from '@/components/primitives/Card'
 import { Badge } from '@/components/primitives/Badge'
-import { Button } from '@/components/primitives/Button'
-import { Input } from '@/components/primitives/Input'
 import { EmptyState } from '@/components/composite/EmptyState'
 import { StatCard } from '@/components/composite/StatCard'
 import api from '@/api/axios'
 import {
-  AlertTriangle,
-  Send,
   CheckCircle,
   XCircle,
   Clock,
@@ -46,23 +42,11 @@ interface Dispute {
 }
 
 export default function StudentDisputes() {
-  const queryClient = useQueryClient()
-  const [entryId, setEntryId] = useState('')
-  const [reason, setReason] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'resolved'>('all')
 
   const { data: disputes, isLoading } = useQuery<Dispute[]>({
     queryKey: ['student-disputes'],
     queryFn: () => api.get('/disputes/my').then((r) => r.data.data),
-  })
-
-  const raiseMutation = useMutation({
-    mutationFn: () => api.post('/disputes', { attendanceEntryId: entryId, reason }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-disputes'] })
-      setEntryId('')
-      setReason('')
-    },
   })
 
   // Calculate stats
@@ -120,7 +104,7 @@ export default function StudentDisputes() {
       {/* Header */}
       <PageHeader
         title="Attendance Disputes"
-        description="Raise disputes for incorrect attendance records and track their status"
+        description="Track the status of your attendance disputes. To raise a new dispute, visit your Attendance page."
       />
 
       {/* Statistics */}
@@ -155,59 +139,6 @@ export default function StudentDisputes() {
         />
       </div>
 
-      {/* Raise Dispute Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-warning-600" />
-            Raise a New Dispute
-          </CardTitle>
-          <CardDescription>
-            If you believe your attendance was incorrectly recorded, you can raise a dispute with
-            supporting details.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <Input
-              label="Attendance Entry ID"
-              placeholder="Enter the attendance record ID"
-              value={entryId}
-              onChange={(e) => setEntryId(e.target.value)}
-            />
-            <Input
-              label="Reason for Dispute"
-              placeholder="Explain why this attendance record is incorrect"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </div>
-
-          {raiseMutation.isError && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 p-4 rounded-lg bg-error-50 border border-error-200 flex items-start gap-3"
-            >
-              <AlertTriangle className="w-5 h-5 text-error-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-error-700">
-                {(raiseMutation.error as any)?.response?.data?.message ||
-                  'Failed to raise dispute. Please try again.'}
-              </p>
-            </motion.div>
-          )}
-
-          <Button
-            onClick={() => raiseMutation.mutate()}
-            disabled={!entryId || !reason || raiseMutation.isPending}
-            isLoading={raiseMutation.isPending}
-            loadingText="Submitting..."
-            leftIcon={<Send className="w-4 h-4" />}
-          >
-            Submit Dispute
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Tabs */}
       <div className="border-b border-surface-200">

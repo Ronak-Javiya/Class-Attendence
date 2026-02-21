@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  
+
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
 
@@ -75,7 +75,7 @@ export default function LoginPage() {
               <rect width="100" height="100" fill="url(#grid)" />
             </svg>
           </div>
-          
+
           {/* Decorative circles */}
           <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
@@ -113,7 +113,7 @@ export default function LoginPage() {
             transition={{ delay: 0.4 }}
             className="text-lg text-white/80 max-w-xl leading-relaxed"
           >
-            Streamline attendance tracking with AI-powered facial recognition. 
+            Streamline attendance tracking with AI-powered facial recognition.
             Designed for modern educational institutions.
           </motion.p>
 
@@ -228,12 +228,12 @@ export default function LoginPage() {
                     />
                     <span className="text-sm text-surface-600">Remember me</span>
                   </label>
-                  <a
-                    href="#"
+                  <Link
+                    to="/forgot-password"
                     className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
                   >
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
 
                 <Button
@@ -242,7 +242,7 @@ export default function LoginPage() {
                   size="lg"
                   isLoading={loading}
                   loadingText="Signing in..."
-                  className="w-full"
+                  fullWidth
                   rightIcon={<ShieldCheck className="w-5 h-5" />}
                 >
                   Sign In

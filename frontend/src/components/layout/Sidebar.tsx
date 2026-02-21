@@ -23,12 +23,16 @@ import {
   GraduationCap,
   Shield,
   UserCheck,
+  Sun,
+  Moon,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/primitives/Button';
 import { Badge } from '@/components/primitives/Badge';
 import useAuthStore from '@/store/authStore';
 import { USER_ROLES, type UserRole, ROUTES } from '@/lib/constants';
+import { useTheme } from '@/context/ThemeContext';
 
 // Navigation item type
 interface NavItem {
@@ -94,8 +98,9 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
     },
     ref
   ) => {
-    const { user } = useAuthStore();
+    const { user, logout } = useAuthStore();
     const location = useLocation();
+    const { theme, toggleTheme } = useTheme();
     const role = (user?.role as UserRole) || USER_ROLES.STUDENT;
     const navItems = navigationConfig[role] || [];
     const roleInfo = roleConfig[role];
@@ -187,8 +192,9 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
           </ul>
         </nav>
 
-        {/* User Section */}
-        <div className="p-3 border-t border-surface-100">
+        {/* Footer Section — Profile + Theme + Logout */}
+        <div className="p-3 border-t border-surface-100 space-y-2">
+          {/* User Profile */}
           <div
             className={cn(
               'flex items-center gap-3 p-2 rounded-lg bg-surface-50',
@@ -212,6 +218,41 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
                 </Badge>
               </div>
             )}
+          </div>
+
+          {/* Theme Toggle & Logout */}
+          <div className={cn('flex gap-2', isCollapsed ? 'flex-col items-center' : 'items-center')}>
+            <Button
+              variant="ghost"
+              size={isCollapsed ? 'icon-sm' : 'sm'}
+              onClick={toggleTheme}
+              className={cn(!isCollapsed && 'flex-1')}
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-4 h-4" />
+              ) : (
+                <Sun className="w-4 h-4" />
+              )}
+              {!isCollapsed && (
+                <span className="ml-2 text-xs">
+                  {theme === 'light' ? 'Dark' : 'Light'}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size={isCollapsed ? 'icon-sm' : 'sm'}
+              onClick={logout}
+              className={cn(
+                'text-error-600 hover:bg-error-50 hover:text-error-700',
+                !isCollapsed && 'flex-1'
+              )}
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+              {!isCollapsed && <span className="ml-2 text-xs">Logout</span>}
+            </Button>
           </div>
         </div>
       </div>

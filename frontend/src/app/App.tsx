@@ -13,6 +13,7 @@ import ToastContainer from '../shared/ui/ToastContainer'
 // Auth
 import LoginPage from '../auth/LoginPage'
 import RegisterPage from '../auth/RegisterPage'
+import ForgotPasswordPage from '../auth/ForgotPasswordPage'
 
 // Student
 import StudentDashboard from '../modules/student/StudentDashboard'
@@ -53,6 +54,7 @@ export default function App() {
                 {/* Public */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
                 {/* Student Routes */}

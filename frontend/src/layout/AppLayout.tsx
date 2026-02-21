@@ -7,7 +7,7 @@ import * as React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { pageVariants } from '@/lib/animations';
+import { pageVariants, routeTransitionVariants } from '@/lib/animations';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 
@@ -45,7 +45,7 @@ export default function AppLayout() {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={location.pathname}
-                variants={pageVariants}
+                variants={routeTransitionVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"

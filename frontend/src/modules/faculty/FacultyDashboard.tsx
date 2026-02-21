@@ -26,7 +26,7 @@ import { Button } from '@/components/primitives/Button';
 import { EmptyState } from '@/components/composite/EmptyState';
 import api from '@/api/axios';
 import useAuthStore from '@/store/authStore';
-import { listVariants, listItemVariants } from '@/lib/animations';
+import { listVariants, listItemVariants, slideUpVariants, formStaggerVariants, formFieldVariants } from '@/lib/animations';
 import { ROUTES } from '@/lib/constants';
 
 export default function FacultyDashboard() {
@@ -67,16 +67,21 @@ export default function FacultyDashboard() {
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
+      <motion.div
+        variants={formStaggerVariants}
+        initial="initial"
+        animate="animate"
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+      >
+        <motion.div variants={formFieldVariants}>
           <h1 className="text-2xl font-bold text-surface-900">
             Welcome, Professor {user?.name?.split(' ')[0] || 'Faculty'}
           </h1>
           <p className="text-surface-500 mt-1">
             Manage your classes and track student attendance
           </p>
-        </div>
-        <div className="flex items-center gap-3">
+        </motion.div>
+        <motion.div variants={formFieldVariants} className="flex items-center gap-3">
           <Button
             variant="secondary"
             leftIcon={<Calendar className="w-4 h-4" />}
@@ -89,8 +94,8 @@ export default function FacultyDashboard() {
           >
             Take Attendance
           </Button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Statistics Grid */}
       <motion.div
@@ -140,9 +145,14 @@ export default function FacultyDashboard() {
       </motion.div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <motion.div
+        variants={formStaggerVariants}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-1 xl:grid-cols-3 gap-6"
+      >
         {/* Today's Schedule - Takes 2 columns */}
-        <div className="xl:col-span-2 space-y-6">
+        <motion.div variants={formFieldVariants} className="xl:col-span-2 space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -216,10 +226,10 @@ export default function FacultyDashboard() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Side Panel - Takes 1 column */}
-        <div className="space-y-6">
+        <motion.div variants={formFieldVariants} className="space-y-6">
           {/* Quick Actions */}
           <Card>
             <CardHeader>
@@ -294,11 +304,16 @@ export default function FacultyDashboard() {
               </CardContent>
             </Card>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Assigned Classes Section */}
-      <section className="space-y-4">
+      <motion.section
+        variants={slideUpVariants}
+        initial="initial"
+        animate="animate"
+        className="space-y-4"
+      >
         <PageHeader
           title="Assigned Classes"
           description="Classes you are currently teaching"
@@ -382,7 +397,7 @@ export default function FacultyDashboard() {
             </div>
           )}
         </motion.div>
-      </section>
+      </motion.section>
     </div>
   );
 }

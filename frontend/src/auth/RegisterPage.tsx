@@ -33,29 +33,29 @@ import { scaleVariants, fadeVariants } from '@/lib/animations';
 type Role = 'HOD' | 'ADMIN' | 'FACULTY' | 'STUDENT';
 
 const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: any }[] = [
-  { 
-    value: 'HOD', 
-    label: 'Head of Department', 
+  {
+    value: 'HOD',
+    label: 'Head of Department',
     description: 'Manage department classes and approvals',
-    icon: Building2 
+    icon: Building2
   },
-  { 
-    value: 'ADMIN', 
-    label: 'Administrator', 
+  {
+    value: 'ADMIN',
+    label: 'Administrator',
     description: 'System management and enrollment approvals',
-    icon: Shield 
+    icon: Shield
   },
-  { 
-    value: 'FACULTY', 
-    label: 'Faculty', 
+  {
+    value: 'FACULTY',
+    label: 'Faculty',
     description: 'Take attendance and manage classes',
-    icon: Users 
+    icon: Users
   },
-  { 
-    value: 'STUDENT', 
-    label: 'Student', 
+  {
+    value: 'STUDENT',
+    label: 'Student',
     description: 'View attendance and enroll in classes',
-    icon: StudentIcon 
+    icon: StudentIcon
   },
 ];
 
@@ -183,7 +183,7 @@ export default function RegisterPage() {
               <rect width="100" height="100" fill="url(#grid)" />
             </svg>
           </div>
-          
+
           {/* Decorative circles */}
           <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
@@ -221,7 +221,7 @@ export default function RegisterPage() {
             transition={{ delay: 0.4 }}
             className="text-lg text-white/80 max-w-xl leading-relaxed"
           >
-            Get started with our AI-powered attendance management system. 
+            Get started with our AI-powered attendance management system.
             Select your role and complete the registration process.
           </motion.p>
 
@@ -329,8 +329,8 @@ export default function RegisterPage() {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <button 
-                      onClick={handleBack} 
+                    <button
+                      onClick={handleBack}
                       className="flex items-center gap-1 text-surface-500 hover:text-surface-700 text-sm mb-4 transition-colors"
                     >
                       <ArrowLeft size={16} /> Back
@@ -372,7 +372,7 @@ export default function RegisterPage() {
                         disabled={loading}
                         isLoading={loading}
                         loadingText="Verifying..."
-                        className="w-full"
+                        fullWidth
                         leftIcon={<Search className="w-5 h-5" />}
                       >
                         Verify Email
@@ -390,8 +390,8 @@ export default function RegisterPage() {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <button 
-                      onClick={handleBack} 
+                    <button
+                      onClick={handleBack}
                       className="flex items-center gap-1 text-surface-500 hover:text-surface-700 text-sm mb-4 transition-colors"
                     >
                       <ArrowLeft size={16} /> Back
@@ -483,7 +483,7 @@ export default function RegisterPage() {
                         disabled={loading}
                         isLoading={loading}
                         loadingText="Creating account..."
-                        className="w-full"
+                        fullWidth
                         leftIcon={<UserPlus className="w-5 h-5" />}
                       >
                         Create Account
@@ -510,7 +510,7 @@ export default function RegisterPage() {
                     <p className="text-surface-600 mb-8">{successMessage}</p>
                     <Button
                       onClick={() => navigate('/login')}
-                      className="w-full"
+                      fullWidth
                       leftIcon={<ShieldCheck className="w-5 h-5" />}
                     >
                       Go to Login

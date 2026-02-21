@@ -348,3 +348,213 @@ export const reducedMotionVariants: Variants = {
   animate: {},
   exit: {},
 };
+
+// Shake animation for form errors
+export const shakeVariants: Variants = {
+  initial: {
+    x: 0,
+  },
+  shake: {
+    x: [-5, 5, -5, 5, -3, 3, -1, 1, 0],
+    transition: {
+      duration: 0.4,
+      ease: 'easeInOut',
+    },
+  },
+};
+
+// Pulse animation for notifications/badges
+export const pulseVariants: Variants = {
+  initial: {
+    scale: 1,
+  },
+  pulse: {
+    scale: [1, 1.1, 1],
+    transition: {
+      duration: 0.6,
+      ease: 'easeInOut',
+      repeat: Infinity,
+      repeatDelay: 1,
+    },
+  },
+};
+
+// Bounce animation for icons
+export const bounceVariants: Variants = {
+  initial: {
+    y: 0,
+    scale: 1,
+  },
+  bounce: {
+    y: [0, -8, 0],
+    scale: [1, 1.1, 1],
+    transition: {
+      duration: 0.5,
+      ease: easing.bounce,
+    },
+  },
+};
+
+// Loading spinner animation
+export const spinnerVariants: Variants = {
+  animate: {
+    rotate: 360,
+    transition: {
+      duration: 1,
+      ease: 'linear',
+      repeat: Infinity,
+    },
+  },
+};
+
+// Success checkmark animation
+export const checkmarkVariants: Variants = {
+  initial: {
+    pathLength: 0,
+    opacity: 0,
+  },
+  animate: {
+    pathLength: 1,
+    opacity: 1,
+    transition: {
+      pathLength: {
+        duration: 0.4,
+        ease: 'easeOut',
+      },
+      opacity: {
+        duration: 0.1,
+      },
+    },
+  },
+};
+
+// Form field stagger container
+export const formStaggerVariants: Variants = {
+  initial: {},
+  animate: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+export const formFieldVariants: Variants = {
+  initial: {
+    opacity: 0,
+    y: 15,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: timing.normal,
+      ease: easing.easeOut,
+    },
+  },
+};
+
+// Table row animations
+export const tableRowVariants: Variants = {
+  initial: {
+    opacity: 0,
+    x: -10,
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: timing.normal,
+      ease: easing.easeOut,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: 10,
+    transition: {
+      duration: timing.fast,
+    },
+  },
+  hover: {
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    transition: {
+      duration: timing.fast,
+    },
+  },
+};
+
+// Dropdown menu animations
+export const dropdownVariants: Variants = {
+  initial: {
+    opacity: 0,
+    y: -8,
+    scale: 0.95,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: timing.fast,
+      ease: easing.spring,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    scale: 0.95,
+    transition: {
+      duration: timing.fast,
+    },
+  },
+};
+
+// Empty state icon animation
+export const emptyStateVariants: Variants = {
+  initial: {
+    opacity: 0,
+    scale: 0.8,
+    y: 20,
+  },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      duration: timing.slow,
+      ease: easing.bounce,
+    },
+  },
+  float: {
+    y: [0, -6, 0],
+    transition: {
+      duration: 3,
+      ease: 'easeInOut',
+      repeat: Infinity,
+    },
+  },
+};
+
+// Page route transition with AnimatePresence
+export const routeTransitionVariants: Variants = {
+  initial: {
+    opacity: 0,
+    x: 20,
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: timing.normal,
+      ease: easing.easeOut,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: -20,
+    transition: {
+      duration: timing.fast,
+      ease: easing.easeIn,
+    },
+  },
+};
