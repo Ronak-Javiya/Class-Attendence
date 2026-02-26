@@ -11,8 +11,17 @@ const storage = require('../services/storage');
 const { encrypt } = require('../utils/crypto');
 
 // Multer config — save to temp
+// Multer config — save directly to OS temp
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const tempDir = storage.getBaseDir();
+            cb(null, tempDir);
+        },
+        filename: (req, file, cb) => {
+            cb(null, `${Date.now()}-${file.originalname}`);
+        }
+    }),
     limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per file
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
@@ -48,13 +57,7 @@ exports.enroll = async (req, res, next) => {
             return res.status(400).json({ error: 'At least 5 face images are required.' });
         }
 
-        // Save images to temp folder
-        const sessionId = studentId + '_enroll';
-        const imagePaths = [];
-        for (const file of req.files) {
-            const filePath = storage.saveFile(sessionId, file.originalname, file.buffer);
-            imagePaths.push(filePath);
-        }
+        const imagePaths = req.files.map(file => file.path);
 
         try {
             // Call AI microservice
@@ -72,8 +75,10 @@ exports.enroll = async (req, res, next) => {
                 imagesUsed: result.imagesUsed
             });
         } finally {
-            // Always clean up temp files
-            storage.deleteSessionFiles(sessionId);
+            // Clean up temporary disk files
+            for (const p of imagePaths) {
+                if (fs.existsSync(p)) fs.unlinkSync(p);
+            }
         }
     } catch (err) {
         next(err);

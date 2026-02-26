@@ -9,14 +9,24 @@ const AttendanceSession = require('../models/AttendanceSession');
 const AttendanceRecord = require('../models/AttendanceRecord');
 const storage = require('../services/storage');
 
+const fs = require('fs');
+
 // BullMQ queue
 const attendanceQueue = new Queue('attendance', {
     connection: { host: config.redis.host, port: config.redis.port }
 });
 
-// Multer — in-memory buffer
+// Multer — save directly to OS disk to prevent RAM max out
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const tempDir = storage.getBaseDir();
+            cb(null, tempDir);
+        },
+        filename: (req, file, cb) => {
+            cb(null, `${Date.now()}-${file.originalname}`);
+        }
+    }),
     limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB per file
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
@@ -51,11 +61,19 @@ exports.createSession = async (req, res, next) => {
             status: 'pending'
         });
 
-        // Save images to temp storage
+        // Disk setup for BullMQ
+        const sessionStr = session._id.toString();
+        const sessionDir = path.join(storage.getBaseDir(), sessionStr);
+        if (!fs.existsSync(sessionDir)) {
+            fs.mkdirSync(sessionDir, { recursive: true });
+        }
+
         const imagePaths = [];
         for (const file of req.files) {
-            const filePath = storage.saveFile(session._id.toString(), file.originalname, file.buffer);
-            imagePaths.push(filePath);
+            // Move uploaded temp file into BullMQ session folder
+            const destPath = path.join(sessionDir, file.filename);
+            fs.renameSync(file.path, destPath);
+            imagePaths.push(destPath);
         }
 
         // Update session with image paths

@@ -1,75 +1,125 @@
-# Smart Attendance College — Backend
+# Smart Attendance System (Multi-tenant) 🎓
 
-A robust, institutional-grade attendance management system where attendance is **photo-generated, audit-safe, and immutable by default**.
+A robust, enterprise-grade attendance tracking platform built for educational institutions. The system uses AI-powered Face Verification, RBAC (Role-Based Access Control) multi-level dashboards, and a background worker queue to handle heavy concurrency during class attendance collection.
 
-## 🚀 Overview
-
-The Smart Attendance College platform automates student attendance tracking using classroom photos. It eliminates manual marking errors and fraud by using a strict, system-generated, and auditable workflow.
-
-### Key Value Propositions
-- **Fraud-Proof**: Attendance is generated ONLY from photos uploaded by the faculty.
-- **Audit-Safe**: Every change to attendance (via disputes) is permanently logged with full traceability.
-- **Role-Based**: Strict access control for Students, Faculty, HODs, and Admins.
-- **State-Driven**: Components follow rigorous state machines (e.g., Classes must be HOD-approved; Lectures must be locked).
+Additionally, this project acts as a **Mobile-First Progressive SaaS** and includes full Capacitor integration for compiling the dashboard directly into an Android `.apk` or iOS Native App.
 
 ---
 
-## 🛠️ Tech Stack
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: MongoDB + Mongoose
-- **Security**: JWT (Access/Refresh), bcrypt, Helmet, Rate Limiter
-- **Logging**: Winston
+## 🚀 Features
+
+*   **Multi-Tenancy:** Single codebase handles multiple institutions (Tenants) simultaneously.
+*   **Role-Based Dashboards:** 18 distinct pages tailored for:
+    *   **Students:** Face Enrollment, Class Browsing, Attendance Tracking, Disputes.
+    *   **Faculty:** Start specific class sessions, Override/Review Attendance, Handle Disputes.
+    *   **HOD (Head of Department):** Audit Logs, Override approvals.
+    *   **Admin:** Institutional metrics, System-wide overrides, Full Report viewing.
+*   **AI Face Verification:** Fast, precise facial recognition powered by a specialized Python Flask microservice.
+*   **Asynchronous Bulk Processing:** BullMQ & Redis worker processes attendance validations in the background without blocking the UI.
+*   **Native Mobile Support:** Complete `@capacitor` setup allowing the web-app to be packaged securely into Android & iOS apps.
+*   **Automated Release Actions:** A `.github/workflows` script automatically builds an Android `.apk` file when you push new git tags (e.g., `v1.0.0`).
 
 ---
 
-## 📦 Core Modules
+## 🏗️ Architecture Stack
 
-1. **Identity & Access (IAM)**: Robust authentication and role-based access control.
-2. **Academic Structure**: Management of Departments, Classes, and Timetables with HOD approval workflows.
-3. **Enrollment & Approval**: Student requests to join classes with Admin approval.
-4. **Attendance Domain**: Photo-only attendance generation with a strict 2-hour upload window.
-5. **Dispute & Audit**: Student-initiated disputes and auditable overrides.
+This project is separated into a Microservice/Monorepo structure.
+
+### 1. Frontend (`/frontend`)
+*   **Framework:** React 19 + TypeScript + Vite
+*   **Styling:** Tailwind CSS + Radix UI Primitives + Framer Motion (Animations)
+*   **State Management:** Zustand (Auth/Store) + React Query (API State)
+*   **Routing:** React Router DOM (v7)
+*   **Mobile Wrapper:** Capacitor (`@capacitor/core`, `@capacitor/ios`, `@capacitor/android`)
+
+### 2. Backend API (`/backend`)
+*   **Framework:** Node.js + Express
+*   **Database:** MongoDB + Mongoose (Multi-tenant structured models)
+*   **Queue/Worker:** BullMQ (Backed by Redis)
+*   **Security:** AES-256-CBC Crypto hashing + JSON Web Tokens (JWT)
+
+### 3. Face Service (`/ai-face-service`)
+*   **Framework:** Python 3 + FastAPI
+*   **AI Models:** DeepFace / OpenCV embeddings model wrapper
+*   *Note: Operates entirely independently. Node.js backend communicates with it over HTTP.*
 
 ---
 
-## 🏃 Quick Start
+## 🛠️ Installation & Setup
 
-### Prerequisites
-- Node.js (v18+)
-- MongoDB (local or Atlas)
+### Requirements:
+*   **Node.js** v20+
+*   **Python** 3.9+
+*   **MongoDB** (Local or Atlas String)
+*   **Redis** (Local instance required for BullMQ Background Worker)
 
-### Installation
-1. Clone the repository and navigate to the backend folder.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment variables (see `backend/.env.example`).
-4. Seed initial data:
-   ```bash
-   npm run seed
-   ```
-
-### Running the App
+### Step 1: Start the Face Verification Service
 ```bash
-# Development mode with nodemon
-npm run dev
-
-# Production mode
-npm start
+cd ai-face-service
+python -m venv venv
+# On Windows: venv\Scripts\activate.ps1
+# On Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+python app.py
 ```
 
+### Step 2: Set up the Backend
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+*(You must duplicate `.env.example` as `.env` and fill in your DB/Redis keys first).*
+
+### Step 3: Run the Background Worker Process
+Because Attendance validation (comparing 60 faces at once) is extraordinarily CPU-heavy, the main Express server delegates this task. **You must run the worker script alongside the server.**
+
+*(In a new terminal)*
+```bash
+cd backend
+npm run worker:dev
+```
+
+### Step 4: Run the Web Dashboard
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open `http://localhost:3000` to view the SaaS dashboard.
+
 ---
 
-## 🧪 Verification
-The system includes comprehensive test scripts for each domain:
-- `node src/scripts/test-academic.js` — Test class lifecycle.
-- `node src/scripts/test-enrollment.js` — Test student enrollment.
-- `node src/scripts/test-attendance.js` — Test photo-only attendance.
-- `node src/scripts/test-dispute.js` — Test dispute/override workflow.
+## 📱 Publishing the Native App (Android/iOS)
 
----
+This project uses Capacitor to wrap the responsive React Web UI into a Native Mobile shell. You don't have to rewrite any Swift or Java code.
 
-## 📖 Further Documentation
-- For technical details, API specs, and directory structure, see [dev.md](./dev.md).
+### Option 1: The Automated GitHub Way (Android)
+We have configured a GitHub Action that spins up a virtual machine, installs Android Studio build tools, compiles your React app, wraps it in the Capacitor android shell, assembles the `.apk` file, and publishes it online for free.
+
+To do this:
+1. Ensure all your code is committed: `git add .` -> `git commit -m "update"` -> `git push`
+2. Create an exact version tag and push it:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+3. Go to the "Actions" tab on your GitHub repo. Watch the build finish.
+4. Go to the "Releases" tab. There is a downloadable `.apk` file there!
+
+### Option 2: Building Manually on your Computer
+Whenever you make changes to the React source code (`/frontend/src/...`) and want to update the Native Apps:
+
+```bash
+cd frontend
+
+# 1. Compile the React source code
+npm run build
+
+# 2. Tell Capacitor to heavily sync the /dist folder into the Native code
+npx cap sync
+```
+
+*   **For Android:** Open the `frontend/android` folder in Android Studio and hit "Run" to launch the emulator, or hit "Build > APK".
+*   **For iOS:** Open the `frontend/ios` folder in Xcode and compile to your physically connected iPhone. *(Requires macOS).*

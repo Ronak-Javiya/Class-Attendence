@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: smart-attendance-mongodb
+    ports:
+      - "127.0.0.1:27020:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: smart-attendance-redis
+    ports:
+      - "127.0.0.1:6380:6379"
+    restart: unless-stopped
+
+  ai-face-service:
+    build: 
+      context: ./ai-face-service
+    container_name: smart-attendance-ai
+    ports:
+      - "127.0.0.1:8100:8000"
+    restart: unless-stopped
+
+  # Note: 
+  # Since Vercel uses Serverless Functions, it cannot run long-lasting background 
+  # jobs like the BullMQ Worker indefinitely. 
+  # The Backend Worker MUST run continuously on a machine like Docker or an AWS EC2.
+  backend-worker:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: smart-attendance-worker
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/smartattendance
+      - JWT_SECRET=${JWT_SECRET:-supersecretjwtkey_please_change_this_for_prod}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-01234567890123456789012345678901}
+      - AI_SERVICE_URL=http://ai-face-service:8000/embedding/classroom
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY:-dev_api_key_123}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+      - mongodb
+      - ai-face-service
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

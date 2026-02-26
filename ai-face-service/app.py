@@ -16,10 +16,22 @@ import uuid
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Security, Depends
+from fastapi.security.api_key import APIKeyHeader
 from fastapi.responses import JSONResponse
 
 from enrollment_embeddings import compute_student_embedding, detect_all_faces
+
+# Security
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+def get_api_key(api_key_header: str = Security(api_key_header)):
+    # Very basic static API key check for internal microservice auth
+    expected_key = os.environ.get("API_KEY", "dev_api_key_123")
+    if api_key_header == expected_key:
+        return api_key_header
+    raise HTTPException(status_code=403, detail="Could not validate credentials")
 
 app = FastAPI(
     title="AI Face Embedding Service",
@@ -46,6 +58,7 @@ async def health():
 async def student_embedding(
     studentId: str = Form(...),
     images: list[UploadFile] = File(...),
+    api_key: str = Depends(get_api_key),
 ):
     """
     Generate a single mean embedding from 5+ student face images.
@@ -98,6 +111,7 @@ async def student_embedding(
 @app.post("/embedding/classroom")
 async def classroom_embedding(
     images: list[UploadFile] = File(...),
+    api_key: str = Depends(get_api_key),
 ):
     """
     Detect ALL faces in one or more classroom photos.

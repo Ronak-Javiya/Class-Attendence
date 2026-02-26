@@ -14,7 +14,8 @@ module.exports = {
     },
 
     ai: {
-        url: process.env.AI_SERVICE_URL || 'http://localhost:8000'
+        url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
+        apiKey: process.env.AI_SERVICE_API_KEY || 'dev_api_key_123'
     },
 
     security: {

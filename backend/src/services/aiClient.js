@@ -24,7 +24,10 @@ async function getStudentEmbedding(studentId, imagePaths) {
     }
 
     const res = await axios.post(`${AI_BASE}/embedding/student`, form, {
-        headers: form.getHeaders(),
+        headers: {
+            ...form.getHeaders(),
+            'X-API-Key': config.ai.apiKey
+        },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         timeout: 120_000 // 2 min for heavy AI inference
@@ -46,7 +49,10 @@ async function getClassroomDetections(imagePaths) {
     }
 
     const res = await axios.post(`${AI_BASE}/embedding/classroom`, form, {
-        headers: form.getHeaders(),
+        headers: {
+            ...form.getHeaders(),
+            'X-API-Key': config.ai.apiKey
+        },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         timeout: 120_000
