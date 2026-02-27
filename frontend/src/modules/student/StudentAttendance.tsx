@@ -23,7 +23,6 @@ interface Record {
 }
 
 export default function StudentAttendance() {
-    const navigate = useNavigate();
     const [records, setRecords] = useState<Record[]>([]);
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
@@ -71,6 +70,7 @@ export default function StudentAttendance() {
 }
 
 function SessionCard({ session }: { session: { _id: string; class_id: { name: string; code: string } | null; status: string; createdAt: string } }) {
+    const navigate = useNavigate();
     const [records, setRecords] = useState<any[]>([]);
     const [expanded, setExpanded] = useState(false);
     const [loadingRecords, setLoadingRecords] = useState(false);
@@ -95,8 +95,8 @@ function SessionCard({ session }: { session: { _id: string; class_id: { name: st
                         <p className="text-xs text-surface-400">{new Date(session.createdAt).toLocaleString()}</p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${session.status === 'completed' ? 'bg-green-50 text-green-700' :
-                            session.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                                'bg-red-50 text-red-700'
+                        session.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                            'bg-red-50 text-red-700'
                         }`}>{session.status}</span>
                 </div>
                 {expanded && (
@@ -120,7 +120,7 @@ function SessionCard({ session }: { session: { _id: string; class_id: { name: st
                                                 onClick={(e: React.MouseEvent) => {
                                                     e.stopPropagation();
                                                     // Navigate to disputes with pre-filled data
-                                                    window.location.href = `/student/disputes?sessionId=${session._id}&recordId=${r._id}`;
+                                                    navigate(`/student/disputes?sessionId=${session._id}&recordId=${r._id}`);
                                                 }}>
                                                 Dispute
                                             </Button>

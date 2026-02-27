@@ -4,8 +4,8 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Setting base to the root directory for Vercel pointing
-  base: '/',
+  // Setting base for GitHub Pages (repository name)
+  base: process.env.VITE_BASE_URL || '/',
   plugins: [react()],
   resolve: {
     alias: {

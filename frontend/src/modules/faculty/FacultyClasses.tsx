@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Loader2, BookOpen, X } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/primitives/Button';
@@ -19,6 +20,7 @@ interface ClassItem {
 }
 
 export default function FacultyClasses() {
+    const navigate = useNavigate();
     const { user } = useAuthStore();
     const [classes, setClasses] = useState<ClassItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ export default function FacultyClasses() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {classes.map(cls => (
                         <Card key={cls._id} className="cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => window.location.href = `/faculty/classes/${cls._id}`}>
+                            onClick={() => navigate(`/faculty/classes/${cls._id}`)}>
                             <CardContent className="p-5">
                                 <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">

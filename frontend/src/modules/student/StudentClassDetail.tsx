@@ -113,6 +113,7 @@ export default function StudentClassDetail() {
 }
 
 function SessionRow({ session }: { session: Session }) {
+    const navigate = useNavigate();
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [expanded, setExpanded] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -135,8 +136,8 @@ function SessionRow({ session }: { session: Session }) {
                     <p className="text-sm font-medium text-surface-900">{new Date(session.createdAt).toLocaleString()}</p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${session.status === 'completed' ? 'bg-green-50 text-green-700' :
-                        session.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                            'bg-red-50 text-red-700'
+                    session.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                        'bg-red-50 text-red-700'
                     }`}>{session.status}</span>
             </div>
             {expanded && (
@@ -159,7 +160,7 @@ function SessionRow({ session }: { session: Session }) {
                                             leftIcon={<AlertCircle className="w-3 h-3 text-error-500" />}
                                             onClick={(e: React.MouseEvent) => {
                                                 e.stopPropagation();
-                                                window.location.href = `/student/disputes?sessionId=${session._id}&recordId=${r._id}`;
+                                                navigate(`/student/disputes?sessionId=${session._id}&recordId=${r._id}`);
                                             }}>
                                             Dispute
                                         </Button>
