@@ -30,7 +30,7 @@ app.use(helmet());
 // Restrict CORS array to your deployed frontend URLs
 const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',')
-    : ['http://localhost:3000', 'https://ronak-javiya.github.io'];
+    : ['http://localhost:3000', 'https://ronak-javiya.github.io', 'https://class-attendence-sand.vercel.app', "*"];
 
 app.use(cors({
     origin: function (origin, callback) {
