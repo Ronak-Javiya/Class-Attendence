@@ -41,8 +41,11 @@ jobs:
         
       - name: Build
         working-directory: ./frontend
-        # IMPORTANT: ensure Vite configs your base path as './' to work on GitHub pages
-        run: npm run build
+        env:
+          VITE_BASE_URL: /Class-Attendence/
+        run: |
+          npm run build
+          cp dist/index.html dist/404.html
         
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
