@@ -6,11 +6,19 @@
 const fs = require('fs');
 const path = require('path');
 
-const TEMP_DIR = path.join(__dirname, '..', '..', 'temp');
+const os = require('os');
+
+const TEMP_DIR = process.env.VERCEL
+    ? path.join(os.tmpdir(), 'smart-attendance-temp')
+    : path.join(__dirname, '..', '..', 'temp');
 
 // Ensure temp directory exists
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+function getBaseDir() {
+    return TEMP_DIR;
 }
 
 /**
@@ -54,4 +62,4 @@ function deleteSessionFiles(sessionId) {
     }
 }
 
-module.exports = { getSessionFolder, saveFile, listFiles, deleteSessionFiles };
+module.exports = { getBaseDir, getSessionFolder, saveFile, listFiles, deleteSessionFiles };
