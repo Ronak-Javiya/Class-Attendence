@@ -37,7 +37,7 @@ jobs:
         
       - name: Set Environment Variables
         working-directory: ./frontend
-        run: echo "VITE_API_URL=http://100.102.89.91:5000/api" > .env
+        run: echo "VITE_API_URL=https://ronak-pc.tailf0fdeb.ts.net/api" > .env
         
       - name: Build
         working-directory: ./frontend
