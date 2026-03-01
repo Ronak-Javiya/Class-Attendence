@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Building2, BarChart3, Loader2, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, Building2, BarChart3, Loader2, BookOpen } from 'lucide-react';
 import { StatCard } from '@/components/composite/StatCard';
 import { Card, CardContent } from '@/components/primitives/Card';
 import { EmptyState } from '@/components/composite/EmptyState';
+import { CircularProgress } from '@/components/primitives/CircularProgress';
 import { listVariants } from '@/lib/animations';
 import api from '@/api/axios';
 
@@ -25,31 +27,41 @@ interface ClassItem {
     name: string;
     code: string;
     department_id?: { _id: string; name: string; code: string };
-    faculty_id?: { name: string; email: string };
     students: string[];
 }
 
+interface ClassAttendance {
+    classId: string;
+    rate: number;
+}
+
 export default function AdminDashboard() {
+    const navigate = useNavigate();
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [classes, setClasses] = useState<ClassItem[]>([]);
+    const [classAttendance, setClassAttendance] = useState<ClassAttendance[]>([]);
     const [loading, setLoading] = useState(true);
-    const [expandedDept, setExpandedDept] = useState<string | null>(null);
 
     useEffect(() => {
         Promise.all([
             api.get('/stats/admin').then(r => setStats(r.data)).catch(() => null),
             api.get('/departments').then(r => setDepartments(r.data)).catch(() => []),
-            api.get('/classes/available').then(r => setClasses(r.data)).catch(() => [])
+            api.get('/classes/available').then(r => setClasses(r.data)).catch(() => []),
+            api.get('/stats/class-attendance').then(r => setClassAttendance(r.data)).catch(() => [])
         ]).finally(() => setLoading(false));
     }, []);
 
-    const getClassesForDept = (deptId: string) => {
-        return classes.filter(c => c.department_id?._id === deptId);
-    };
+    const getClassesForDept = (deptId: string) => classes.filter(c => c.department_id?._id === deptId);
 
-    const toggleDept = (deptId: string) => {
-        setExpandedDept(prev => prev === deptId ? null : deptId);
+    const getDeptAttendance = (deptId: string) => {
+        const deptClasses = getClassesForDept(deptId);
+        if (deptClasses.length === 0) return 0;
+        const rates = deptClasses.map(c => {
+            const found = classAttendance.find(ca => ca.classId === c._id);
+            return found?.rate ?? 0;
+        });
+        return Math.round(rates.reduce((a, b) => a + b, 0) / rates.length);
     };
 
     return (
@@ -64,7 +76,7 @@ export default function AdminDashboard() {
                 </div>
             ) : (
                 <>
-                    {/* Stats Grid — no overrides */}
+                    {/* Stats Grid */}
                     <motion.div variants={listVariants} initial="initial" animate="animate"
                         className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         <StatCard title="Total Users" value={stats?.totalUsers ?? 0} icon={<Users className="w-6 h-6" />}
@@ -75,64 +87,38 @@ export default function AdminDashboard() {
                             iconBgColor="#FFFBEB" iconColor="#D97706" />
                     </motion.div>
 
-                    {/* Departments with nested classes */}
+                    {/* Departments — Card Grid */}
                     <div>
                         <h2 className="text-lg font-bold text-surface-900 mb-4">College Departments</h2>
                         {departments.length === 0 ? (
                             <EmptyState icon="clipboard" title="No departments" description="Create departments to organize your college." compact />
                         ) : (
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                 {departments.map(dept => {
                                     const deptClasses = getClassesForDept(dept._id);
-                                    const isExpanded = expandedDept === dept._id;
+                                    const attendanceRate = getDeptAttendance(dept._id);
                                     return (
-                                        <Card key={dept._id}>
-                                            <CardContent className="p-0">
-                                                {/* Department header */}
-                                                <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-50 transition-colors"
-                                                    onClick={() => toggleDept(dept._id)}>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
-                                                            <Building2 className="w-5 h-5 text-primary-600" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-surface-900">{dept.name}</p>
-                                                            <p className="text-xs text-surface-500">Code: {dept.code} · {deptClasses.length} classes</p>
-                                                        </div>
-                                                    </div>
-                                                    {isExpanded
-                                                        ? <ChevronDown className="w-5 h-5 text-surface-400" />
-                                                        : <ChevronRight className="w-5 h-5 text-surface-400" />}
-                                                </div>
-
-                                                {/* Nested classes */}
-                                                {isExpanded && (
-                                                    <div className="border-t border-surface-100 px-4 pb-4">
-                                                        {deptClasses.length === 0 ? (
-                                                            <p className="text-xs text-surface-400 py-3">No classes in this department.</p>
-                                                        ) : (
-                                                            <div className="space-y-2 mt-3">
-                                                                {deptClasses.map(cls => (
-                                                                    <div key={cls._id} className="flex items-center justify-between p-3 bg-surface-50 rounded-lg">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-surface-200">
-                                                                                <BookOpen className="w-4 h-4 text-primary-600" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-sm font-medium text-surface-900">{cls.name}</p>
-                                                                                <p className="text-xs text-surface-500">Code: {cls.code}</p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="text-right">
-                                                                            <p className="text-xs text-surface-500">Faculty: {cls.faculty_id?.name || 'Unassigned'}</p>
-                                                                            <p className="text-xs text-surface-400">{cls.students?.length || 0} students</p>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
+                                        <Card key={dept._id}
+                                            className="cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                                            onClick={() => navigate(`/admin/departments/${dept._id}`)}>
+                                            <CardContent className="p-5">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                                                                <Building2 className="w-4 h-4 text-primary-600" />
                                                             </div>
-                                                        )}
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-semibold text-surface-900 truncate">{dept.name}</p>
+                                                                <p className="text-xs text-surface-500">Code: {dept.code}</p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-primary-600 font-medium mt-1">
+                                                            {deptClasses.length} classes · {deptClasses.reduce((sum, c) => sum + (c.students?.length || 0), 0)} students
+                                                        </p>
                                                     </div>
-                                                )}
+                                                    <CircularProgress value={attendanceRate} size={44} strokeWidth={4} />
+                                                </div>
                                             </CardContent>
                                         </Card>
                                     );

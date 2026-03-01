@@ -121,24 +121,11 @@ export default function FacultyClassDetail() {
                     <h1 className="text-xl font-bold text-surface-900">{cls.name}</h1>
                     <p className="text-sm text-surface-500">{cls.department_id?.name || ''}</p>
                 </div>
+                <Button variant="secondary" size="sm" onClick={copyCode}
+                    leftIcon={codeCopied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}>
+                    {codeCopied ? 'Copied!' : `Copy Code: ${cls.code}`}
+                </Button>
             </div>
-
-            {/* Class Code — Prominent Share Section */}
-            <Card className="bg-gradient-to-r from-primary-50 to-primary-100/50 border-primary-200">
-                <CardContent className="p-5">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div>
-                            <p className="text-xs font-medium text-primary-600 uppercase tracking-wider mb-1">Class Code</p>
-                            <p className="text-3xl font-bold text-primary-800 tracking-widest font-mono">{cls.code}</p>
-                            <p className="text-xs text-primary-500 mt-1">Share this code with students to let them join</p>
-                        </div>
-                        <Button variant="secondary" size="sm" onClick={copyCode}
-                            leftIcon={codeCopied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}>
-                            {codeCopied ? 'Copied!' : 'Copy Code'}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
 
             {/* Quick Stats + Add Attendance Button */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

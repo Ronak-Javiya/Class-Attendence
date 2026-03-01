@@ -40,7 +40,10 @@ export default function StudentClassDetail() {
     useEffect(() => {
         Promise.all([
             api.get(`/classes/${id}`).then(r => setCls(r.data)),
-            api.get(`/attendance/sessions?classId=${id}`).then(r => setSessions(r.data))
+            api.get(`/attendance/sessions?classId=${id}`).then(r => {
+                const allSessions: Session[] = r.data;
+                setSessions(allSessions.filter(s => s.status === 'completed'));
+            })
         ]).catch(() => { }).finally(() => setLoading(false));
     }, [id]);
 

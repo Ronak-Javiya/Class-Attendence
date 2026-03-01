@@ -33,6 +33,7 @@ import AdminDashboard from '@/modules/admin/AdminDashboard';
 import AdminEnrollments from '@/modules/admin/AdminEnrollments';
 import AdminOverrides from '@/modules/admin/AdminOverrides';
 import AdminReports from '@/modules/admin/AdminReports';
+import AdminDepartmentDetail from '@/modules/admin/AdminDepartmentDetail';
 
 // HOD
 import HodDashboard from '@/modules/hod/HodDashboard';
@@ -91,6 +92,7 @@ export default function App() {
             <Route element={<PrivateRoute allowedRoles={['admin']} />}>
                 <Route element={<AppLayout />}>
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/departments/:id" element={<AdminDepartmentDetail />} />
                     <Route path="/admin/enrollments" element={<AdminEnrollments />} />
                     <Route path="/admin/overrides" element={<AdminOverrides />} />
                     <Route path="/admin/reports" element={<AdminReports />} />

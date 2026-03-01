@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Users, CalendarCheck, AlertCircle, Loader2, BookOpen, Plus } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarCheck, AlertCircle, Loader2, BookOpen, Plus, X } from 'lucide-react';
 import { StatCard } from '@/components/composite/StatCard';
 import { Card, CardContent } from '@/components/primitives/Card';
 import { Button } from '@/components/primitives/Button';
+import { Input } from '@/components/primitives/Input';
 import { EmptyState } from '@/components/composite/EmptyState';
 import { CircularProgress } from '@/components/primitives/CircularProgress';
 import { listVariants } from '@/lib/animations';
@@ -44,6 +45,12 @@ export default function FacultyDashboard() {
     const [classAttendance, setClassAttendance] = useState<ClassAttendance[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Create class modal state
+    const [showModal, setShowModal] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [formName, setFormName] = useState('');
+    const [formError, setFormError] = useState('');
+
     useEffect(() => {
         Promise.all([
             api.get('/stats/faculty').then(r => setStats(r.data)).catch(() => null),
@@ -57,6 +64,29 @@ export default function FacultyDashboard() {
         return found?.rate ?? 0;
     };
 
+    const handleCreateClass = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreating(true);
+        setFormError('');
+        try {
+            await api.post('/classes', {
+                name: formName,
+                departmentId: user?.department_id,
+                facultyId: user?.id,
+            });
+            setShowModal(false);
+            setFormName('');
+            // Re-fetch classes
+            api.get('/classes').then(r => setClasses(r.data)).catch(() => { });
+            api.get('/stats/faculty').then(r => setStats(r.data)).catch(() => { });
+            api.get('/stats/class-attendance').then(r => setClassAttendance(r.data)).catch(() => { });
+        } catch (err: any) {
+            setFormError(err.response?.data?.error || 'Failed to create class.');
+        } finally {
+            setCreating(false);
+        }
+    };
+
     return (
         <div className="space-y-6 sm:space-y-8">
             {/* Welcome + Create Class */}
@@ -68,7 +98,7 @@ export default function FacultyDashboard() {
                     <p className="text-surface-500 text-sm mt-1">Manage your classes and attendance sessions</p>
                 </div>
                 <Button size="sm" leftIcon={<Plus className="w-4 h-4" />}
-                    onClick={() => navigate(ROUTES.FACULTY.CLASSES)}>Create Class</Button>
+                    onClick={() => setShowModal(true)}>Create Class</Button>
             </div>
 
             {loading ? (
@@ -125,6 +155,28 @@ export default function FacultyDashboard() {
                         )}
                     </div>
                 </>
+            )}
+
+            {/* Create Class Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+                        <button onClick={() => setShowModal(false)}
+                            className="absolute top-4 right-4 text-surface-400 hover:text-surface-600">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-lg font-bold text-surface-900 mb-4">Create New Class</h2>
+                        <form onSubmit={handleCreateClass} className="space-y-4">
+                            <Input label="Class Name" placeholder="e.g. Data Structures" value={formName}
+                                onChange={e => setFormName(e.target.value)} required />
+                            <p className="text-xs text-surface-400">A unique class code will be automatically generated.</p>
+                            {formError && <div className="p-3 rounded-lg bg-error-50 text-error-700 text-sm font-medium">{formError}</div>}
+                            <Button type="submit" className="w-full" disabled={creating}>
+                                {creating ? 'Creating...' : 'Create Class'}
+                            </Button>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );
